@@ -280,15 +280,7 @@ namespace AssemblyCodePlugin.UI
                 settings.Rules.Select(r => new RuleRowViewModel(r)));
             GridRules.ItemsSource = _rows;
 
-            Closing += (s, e) =>
-            {
-                try
-                {
-                    SaveUiToSettings();
-                    ConfigService.Save(_settings);
-                }
-                catch { }
-            };
+            // Автосохранение при закрытии окна отключено - сохранение только по кнопке "Сохранить настройки" или "ЗАПУСТИТЬ"
 
             foreach (var name in levelNames)
             {
@@ -335,9 +327,6 @@ namespace AssemblyCodePlugin.UI
             string newConfig = CmbConfigs.SelectedItem.ToString();
             string oldConfig = ConfigService.GetActiveConfigName();
             if (newConfig == oldConfig) return;
-
-            SaveUiToSettings();
-            ConfigService.SaveConfig(oldConfig, _settings);
 
             ConfigService.SetActiveConfigName(newConfig);
             _settings = ConfigService.LoadConfig(newConfig);
@@ -642,7 +631,33 @@ namespace AssemblyCodePlugin.UI
         private void BtnDelete_Click(object sender, RoutedEventArgs e)
         {
             if (GridRules.SelectedItem is RuleRowViewModel row)
-                _rows.Remove(row);
+                DeleteSelectedRow(row);
+        }
+
+        private void GridRules_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Delete)
+            {
+                e.Handled = true;
+                if (GridRules.SelectedItem is RuleRowViewModel row)
+                    DeleteSelectedRow(row);
+            }
+        }
+
+        private void DeleteSelectedRow(RuleRowViewModel row)
+        {
+            if (row == null) return;
+            int idx = _rows.IndexOf(row);
+            if (idx >= 0)
+            {
+                _rows.RemoveAt(idx);
+                if (_rows.Count > 0)
+                {
+                    int nextIdx = Math.Min(idx, _rows.Count - 1);
+                    GridRules.SelectedIndex = nextIdx;
+                    GridRules.Focus();
+                }
+            }
         }
 
         private void BtnUp_Click(object sender, RoutedEventArgs e)

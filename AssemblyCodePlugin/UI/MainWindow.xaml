@@ -285,8 +285,7 @@
             </Grid.RowDefinitions>
 
             <!-- Таблица правил с колонками классификатора и выбором -->
-            <!-- Таблица правил с колонками классификатора и выбором -->
-            <DataGrid Grid.Row="0" x:Name="GridRules" MouseDoubleClick="GridRules_DoubleClick" RowHeight="58">
+            <DataGrid Grid.Row="0" x:Name="GridRules" MouseDoubleClick="GridRules_DoubleClick" PreviewKeyDown="GridRules_PreviewKeyDown" RowHeight="58">
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Setter Property="Background" Value="Transparent"/>
