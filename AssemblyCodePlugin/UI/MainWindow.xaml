@@ -361,19 +361,22 @@
                                 ToolTip="Настроить параметр и значения для надземной и подземной части"/>
                     </Grid>
 
-                    <!-- Переключатель суффикса BGL с подсказкой -->
-                    <Grid Grid.Row="4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <CheckBox Grid.Column="0" x:Name="ChkNeverAddBglSuffix" Style="{StaticResource ToggleSwitchStyle}" VerticalAlignment="Center">
+                    <!-- Переключатель суффикса BGL с развёрнутой подсказкой -->
+                    <StackPanel Grid.Row="4" Orientation="Vertical">
+                        <CheckBox x:Name="ChkNeverAddBglSuffix" Style="{StaticResource ToggleSwitchStyle}" VerticalAlignment="Center">
                             <TextBlock Text="Не добавлять суффикс _BGL для подземной части" FontWeight="SemiBold" Foreground="#1E293B"/>
                         </CheckBox>
-                        <TextBlock Grid.Column="1" Text="ℹ️ Применяется при записи в параметры экземпляра"
-                                   FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="14,0,0,0"
-                                   ToolTip="Для случаев, когда: 1. Код по классификатору и идентификатор зоны записываются в параметры экземпляра; 2. Код идентичен для обеих частей, а идентификатор зоны пишется в экземпляр."/>
-                    </Grid>
+                        <TextBlock FontSize="11"
+                                   Foreground="#64748B"
+                                   TextWrapping="Wrap"
+                                   Margin="48,4,0,0">
+                            <Run Text="Для случаев, когда:" FontWeight="Medium"/>
+                            <LineBreak/>
+                            <Run Text="1. Код по классификатору и индентификатор надземной/подземной части здания записываются в параметры экземпляра."/>
+                            <LineBreak/>
+                            <Run Text="2. Код по классификатору индентичен для надземной и подземной части здания, а индентификатор надземной/подземной части здания записывается в параметры экземпляра."/>
+                        </TextBlock>
+                    </StackPanel>
                 </Grid>
             </Border>
         </Grid>
