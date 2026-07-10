@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AssemblyCodePlugin.Models;
+using Autodesk.Revit.DB;
 
 namespace AssemblyCodePlugin.UI
 {
@@ -15,12 +17,46 @@ namespace AssemblyCodePlugin.UI
         public int Points { get; set; }
     }
 
+    public class FilterConditionViewModel : INotifyPropertyChanged
+    {
+        private string _paramName = "Имя типа";
+        private string _comparator = "Содержит";
+        private string _valueString = "";
+
+        public string ParamName
+        {
+            get => _paramName;
+            set { _paramName = value; OnPropertyChanged(nameof(ParamName)); }
+        }
+
+        public string Comparator
+        {
+            get => _comparator;
+            set { _comparator = value; OnPropertyChanged(nameof(Comparator)); }
+        }
+
+        public string ValueString
+        {
+            get => _valueString;
+            set { _valueString = value; OnPropertyChanged(nameof(ValueString)); }
+        }
+
+        public ObservableCollection<string> AvailableParameters { get; } = new ObservableCollection<string>();
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string name) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
     public partial class RuleEditDialog : Window
     {
         private readonly ClassificationRule _source;
+        private readonly Document _doc;
         public ClassificationRule Result { get; private set; }
 
-        // Коллекции тегов для Вкладки 1 (Фильтры Revit)
+        public ObservableCollection<FilterConditionViewModel> FilterConditions { get; } = new ObservableCollection<FilterConditionViewModel>();
+
+        // Коллекции тегов для Вкладки 1 (Фильтры Revit - устаревшие для совместимости)
         public ObservableCollection<string> FamilyContainsTags { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> FamilyNotContainsTags { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> TypeContainsTags { get; } = new ObservableCollection<string>();
@@ -49,10 +85,11 @@ namespace AssemblyCodePlugin.UI
             ("OST_EdgeSlab — Монолитный пояс (EdgeSlab)", "OST_EdgeSlab", "Монолитный пояс"),
         };
 
-        public RuleEditDialog(ClassificationRule rule)
+        public RuleEditDialog(ClassificationRule rule, Document doc = null)
         {
             InitializeComponent();
             _source = rule;
+            _doc = doc;
             DataContext = this;
             LoadFromRule(rule);
         }
@@ -67,10 +104,29 @@ namespace AssemblyCodePlugin.UI
             CmbCategory.SelectedIndex = Array.FindIndex(Categories, c => c.BIC == f.TargetCategory);
             if (CmbCategory.SelectedIndex < 0) CmbCategory.SelectedIndex = 0;
 
-            LoadTags(FamilyContainsTags, f.FamilyNameContainsAny);
-            LoadTags(FamilyNotContainsTags, f.FamilyNameNotContains);
-            LoadTags(TypeContainsTags, f.TypeNameContainsAny);
-            LoadTags(TypeNotContainsTags, f.TypeNameNotContains);
+            if (f.LogicalOperator == "OR" || f.LogicalOperator == "ИЛИ")
+                CmbLogicalOperator.SelectedIndex = 1;
+            else
+                CmbLogicalOperator.SelectedIndex = 0;
+
+            RefreshAvailableParametersForSelectedCategory();
+
+            FilterConditions.Clear();
+            var effConds = f.GetEffectiveConditions();
+            if (effConds != null)
+            {
+                foreach (var cond in effConds)
+                {
+                    var vm = new FilterConditionViewModel
+                    {
+                        ParamName = cond.ParamName ?? "Имя типа",
+                        Comparator = cond.Comparator ?? "Содержит",
+                        ValueString = cond.ValueString ?? ""
+                    };
+                    PopulateVmParams(vm);
+                    FilterConditions.Add(vm);
+                }
+            }
 
             var ab = r.AboveGroundSearchRule ?? new ClassifierSearchRule();
             LoadTags(AboveAnyTrueTags, ab.AnyTrue);
@@ -83,6 +139,91 @@ namespace AssemblyCodePlugin.UI
             LoadTags(BelowAllTrueTags, bel.AllTrue);
             LoadTags(BelowExceptionsTags, bel.Exceptions);
             LoadBonuses(BelowBonusRows, bel.ExtraTrue);
+        }
+
+        private List<string> _currentCategoryParams = new List<string> { "Имя типа", "Имя семейства" };
+
+        private void CmbCategory_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            RefreshAvailableParametersForSelectedCategory();
+        }
+
+        private void RefreshAvailableParametersForSelectedCategory()
+        {
+            int catIdx = CmbCategory.SelectedIndex;
+            string bicStr = catIdx >= 0 && catIdx < Categories.Length ? Categories[catIdx].BIC : "OST_Walls";
+
+            var list = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Имя типа", "Имя семейства" };
+
+            if (_doc != null && Enum.TryParse<BuiltInCategory>(bicStr, out var bic))
+            {
+                try
+                {
+                    var types = new FilteredElementCollector(_doc).OfCategory(bic).WhereElementIsElementType().Take(15);
+                    foreach (var t in types)
+                    {
+                        foreach (Parameter p in t.Parameters)
+                        {
+                            if (p.Definition != null && !string.IsNullOrWhiteSpace(p.Definition.Name))
+                                list.Add(p.Definition.Name);
+                        }
+                    }
+
+                    var insts = new FilteredElementCollector(_doc).OfCategory(bic).WhereElementIsNotElementType().Take(15);
+                    foreach (var inst in insts)
+                    {
+                        foreach (Parameter p in inst.Parameters)
+                        {
+                            if (p.Definition != null && !string.IsNullOrWhiteSpace(p.Definition.Name))
+                                list.Add(p.Definition.Name);
+                        }
+                    }
+
+                    var bindingMap = _doc.ParameterBindings;
+                    var it = bindingMap.ForwardIterator();
+                    while (it.MoveNext())
+                    {
+                        if (it.Key is Definition def && !string.IsNullOrWhiteSpace(def.Name))
+                            list.Add(def.Name);
+                    }
+                }
+                catch { }
+            }
+
+            _currentCategoryParams = new List<string> { "Имя типа", "Имя семейства" };
+            _currentCategoryParams.AddRange(list.Where(x => !string.Equals(x, "Имя типа", StringComparison.OrdinalIgnoreCase) && !string.Equals(x, "Имя семейства", StringComparison.OrdinalIgnoreCase)).OrderBy(x => x));
+
+            foreach (var vm in FilterConditions)
+            {
+                PopulateVmParams(vm);
+            }
+        }
+
+        private void PopulateVmParams(FilterConditionViewModel vm)
+        {
+            vm.AvailableParameters.Clear();
+            foreach (var p in _currentCategoryParams)
+                vm.AvailableParameters.Add(p);
+        }
+
+        private void BtnAddCondition_Click(object sender, RoutedEventArgs e)
+        {
+            var vm = new FilterConditionViewModel
+            {
+                ParamName = "Имя типа",
+                Comparator = "Содержит",
+                ValueString = ""
+            };
+            PopulateVmParams(vm);
+            FilterConditions.Add(vm);
+        }
+
+        private void RemoveCondition_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is FilterConditionViewModel vm)
+            {
+                FilterConditions.Remove(vm);
+            }
         }
 
         private void LoadTags(ObservableCollection<string> col, List<string> source)
@@ -130,23 +271,6 @@ namespace AssemblyCodePlugin.UI
                 targetCollection.Remove(tagText);
             }
         }
-
-        // Кнопки добавления чипов: Вкладка 1
-        private void BtnAddFamContains_Click(object sender, RoutedEventArgs e) => AddTag(TxtAddFamContains, FamilyContainsTags);
-        private void TxtAddFamContains_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) AddTag(TxtAddFamContains, FamilyContainsTags); }
-        private void RemoveFamContains_Click(object sender, RoutedEventArgs e) => RemoveTag(sender, FamilyContainsTags);
-
-        private void BtnAddFamNotContains_Click(object sender, RoutedEventArgs e) => AddTag(TxtAddFamNotContains, FamilyNotContainsTags);
-        private void TxtAddFamNotContains_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) AddTag(TxtAddFamNotContains, FamilyNotContainsTags); }
-        private void RemoveFamNotContains_Click(object sender, RoutedEventArgs e) => RemoveTag(sender, FamilyNotContainsTags);
-
-        private void BtnAddTypeContains_Click(object sender, RoutedEventArgs e) => AddTag(TxtAddTypeContains, TypeContainsTags);
-        private void TxtAddTypeContains_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) AddTag(TxtAddTypeContains, TypeContainsTags); }
-        private void RemoveTypeContains_Click(object sender, RoutedEventArgs e) => RemoveTag(sender, TypeContainsTags);
-
-        private void BtnAddTypeNotContains_Click(object sender, RoutedEventArgs e) => AddTag(TxtAddTypeNotContains, TypeNotContainsTags);
-        private void TxtAddTypeNotContains_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) AddTag(TxtAddTypeNotContains, TypeNotContainsTags); }
-        private void RemoveTypeNotContains_Click(object sender, RoutedEventArgs e) => RemoveTag(sender, TypeNotContainsTags);
 
         // Кнопки добавления чипов: Вкладка 2 (Надземная часть ▲)
         private void BtnAddAboveAny_Click(object sender, RoutedEventArgs e) => AddTag(TxtAddAboveAny, AboveAnyTrueTags);
@@ -272,6 +396,13 @@ namespace AssemblyCodePlugin.UI
                 {
                     TargetCategory = bic,
                     CategoryDisplayName = dispName,
+                    LogicalOperator = CmbLogicalOperator.SelectedIndex == 1 ? "OR" : "AND",
+                    Conditions = FilterConditions.Select(vm => new FilterConditionRule
+                    {
+                        ParamName = vm.ParamName?.Trim() ?? "Имя типа",
+                        Comparator = vm.Comparator ?? "Содержит",
+                        ValueString = vm.ValueString?.Trim() ?? ""
+                    }).Where(c => !string.IsNullOrEmpty(c.ValueString)).ToList(),
                     FamilyNameContainsAny = FamilyContainsTags.ToList(),
                     FamilyNameNotContains = FamilyNotContainsTags.ToList(),
                     TypeNameContainsAny = TypeContainsTags.ToList(),

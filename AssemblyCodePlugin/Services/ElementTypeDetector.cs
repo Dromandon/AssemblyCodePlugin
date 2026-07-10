@@ -36,43 +36,134 @@ namespace AssemblyCodePlugin.Services
                     !string.Equals(categoryBicName, f.TargetCategory, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                // 2. Проверка имени семейства (если задано)
-                if (f.FamilyNameContainsAny != null && f.FamilyNameContainsAny.Count > 0)
+                // 2. Проверка условий фильтрации
+                var conds = f.GetEffectiveConditions();
+                if (conds == null || conds.Count == 0)
                 {
-                    bool anyFamilyMatch = f.FamilyNameContainsAny.Any(pattern =>
-                        familyName.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0);
-                    if (!anyFamilyMatch) continue;
-
-                    // Проверяем NOT Contains для семейства
-                    if (f.FamilyNameNotContains != null && f.FamilyNameNotContains.Count > 0)
-                    {
-                        bool hasExcluded = f.FamilyNameNotContains.Any(pattern =>
-                            familyName.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0);
-                        if (hasExcluded) continue;
-                    }
-
                     return rule;
                 }
 
-                // 3. Если имя семейства не задано — проверяем имя типоразмера
-                if (f.TypeNameContainsAny != null && f.TypeNameContainsAny.Count > 0)
+                bool isOr = (f.LogicalOperator == "OR" || f.LogicalOperator == "ИЛИ");
+                bool matchResult = isOr ? false : true;
+
+                foreach (var cond in conds)
                 {
-                    bool anyTypeMatch = f.TypeNameContainsAny.Any(pattern =>
-                        typeName.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0);
-                    if (!anyTypeMatch) continue;
+                    string valStr = GetParameterValueString(elem, elemType, cond.ParamName);
+                    bool condEval = EvaluateCondition(cond, valStr);
 
-                    if (f.TypeNameNotContains != null && f.TypeNameNotContains.Count > 0)
+                    if (isOr)
                     {
-                        bool hasExcluded = f.TypeNameNotContains.Any(pattern =>
-                            typeName.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0);
-                        if (hasExcluded) continue;
+                        if (condEval)
+                        {
+                            matchResult = true;
+                            break;
+                        }
                     }
-
-                    return rule;
+                    else
+                    {
+                        if (!condEval)
+                        {
+                            matchResult = false;
+                            break;
+                        }
+                    }
                 }
+
+                if (matchResult)
+                    return rule;
             }
 
             return null;
+        }
+
+        private static string GetParameterValueString(Element elem, ElementType elemType, string paramName)
+        {
+            if (string.IsNullOrWhiteSpace(paramName)) return "";
+
+            string pName = paramName.Trim();
+            if (string.Equals(pName, "Имя семейства", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pName, "FamilyName", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pName, "Family Name", StringComparison.OrdinalIgnoreCase))
+            {
+                return (elemType as FamilySymbol)?.Family?.Name ?? "";
+            }
+
+            if (string.Equals(pName, "Имя типа", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pName, "TypeName", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pName, "Type Name", StringComparison.OrdinalIgnoreCase))
+            {
+                return elemType?.Name ?? "";
+            }
+
+            Parameter param = elemType?.LookupParameter(pName);
+            if (param == null && elem != null)
+                param = elem.LookupParameter(pName);
+            if (param == null)
+                param = (elemType as FamilySymbol)?.Family?.LookupParameter(pName);
+
+            if (param == null) return "";
+
+            switch (param.StorageType)
+            {
+                case StorageType.String:
+                    return param.AsString() ?? "";
+                case StorageType.Double:
+                case StorageType.Integer:
+                    string vs = param.AsValueString();
+                    if (!string.IsNullOrEmpty(vs)) return vs;
+                    return param.StorageType == StorageType.Double
+                        ? param.AsDouble().ToString()
+                        : param.AsInteger().ToString();
+                case StorageType.ElementId:
+                    return param.AsElementId()?.IntegerValue.ToString() ?? "";
+                default:
+                    return "";
+            }
+        }
+
+        private static bool EvaluateCondition(FilterConditionRule cond, string valStr)
+        {
+            if (cond == null) return true;
+            string target = cond.ValueString ?? "";
+            valStr = valStr ?? "";
+
+            switch (cond.Comparator)
+            {
+                case "Содержит":
+                    return valStr.IndexOf(target, StringComparison.OrdinalIgnoreCase) >= 0;
+                case "Не содержит":
+                    return valStr.IndexOf(target, StringComparison.OrdinalIgnoreCase) < 0;
+                case "Равно":
+                    return string.Equals(valStr, target, StringComparison.OrdinalIgnoreCase);
+                case "Не равно":
+                    return !string.Equals(valStr, target, StringComparison.OrdinalIgnoreCase);
+                case "Начинается с":
+                    return valStr.StartsWith(target, StringComparison.OrdinalIgnoreCase);
+                case "Заканчивается на":
+                    return valStr.EndsWith(target, StringComparison.OrdinalIgnoreCase);
+                case "Больше (>)":
+                case "Больше":
+                    if (double.TryParse(valStr, out double v1) && double.TryParse(target, out double t1))
+                        return v1 > t1;
+                    return string.Compare(valStr, target, StringComparison.OrdinalIgnoreCase) > 0;
+                case "Меньше (<)":
+                case "Меньше":
+                    if (double.TryParse(valStr, out double v2) && double.TryParse(target, out double t2))
+                        return v2 < t2;
+                    return string.Compare(valStr, target, StringComparison.OrdinalIgnoreCase) < 0;
+                case "Больше или равно (>=)":
+                case "Больше или равно":
+                    if (double.TryParse(valStr, out double v3) && double.TryParse(target, out double t3))
+                        return v3 >= t3;
+                    return string.Compare(valStr, target, StringComparison.OrdinalIgnoreCase) >= 0;
+                case "Меньше или равно (<=)":
+                case "Меньше или равно":
+                    if (double.TryParse(valStr, out double v4) && double.TryParse(target, out double t4))
+                        return v4 <= t4;
+                    return string.Compare(valStr, target, StringComparison.OrdinalIgnoreCase) <= 0;
+                default:
+                    return valStr.IndexOf(target, StringComparison.OrdinalIgnoreCase) >= 0;
+            }
         }
 
         private static readonly Dictionary<int, string> _bicMap = new Dictionary<int, string>

@@ -40,14 +40,23 @@ namespace AssemblyCodePlugin.UI
             FilterTokens.Clear();
             if (Rule?.RevitFilter == null) return;
             FilterTokens.Add(new FilterTokenViewModel { Label = "Кат.: ", Value = Rule.RevitFilter.CategoryDisplayName });
-            if (Rule.RevitFilter.FamilyNameContainsAny.Count > 0)
-                FilterTokens.Add(new FilterTokenViewModel { Label = "; Сем. содержит: ", Value = string.Join(" ИЛИ ", Rule.RevitFilter.FamilyNameContainsAny) });
-            if (Rule.RevitFilter.FamilyNameNotContains.Count > 0)
-                FilterTokens.Add(new FilterTokenViewModel { Label = "; Сем. не содержит: ", Value = string.Join(", ", Rule.RevitFilter.FamilyNameNotContains) });
-            if (Rule.RevitFilter.TypeNameContainsAny.Count > 0)
-                FilterTokens.Add(new FilterTokenViewModel { Label = "; Тип. содержит: ", Value = string.Join(" ИЛИ ", Rule.RevitFilter.TypeNameContainsAny) });
-            if (Rule.RevitFilter.TypeNameNotContains.Count > 0)
-                FilterTokens.Add(new FilterTokenViewModel { Label = "; Тип. не содержит: ", Value = string.Join(", ", Rule.RevitFilter.TypeNameNotContains) });
+
+            var conds = Rule.RevitFilter.GetEffectiveConditions();
+            if (conds != null && conds.Count > 0)
+            {
+                string joinOp = (Rule.RevitFilter.LogicalOperator == "OR" || Rule.RevitFilter.LogicalOperator == "ИЛИ") ? " [ИЛИ] " : " [И] ";
+                bool first = true;
+                foreach (var cond in conds)
+                {
+                    string prefix = first ? "; " : joinOp;
+                    first = false;
+                    FilterTokens.Add(new FilterTokenViewModel
+                    {
+                        Label = $"{prefix}{cond.ParamName} ({cond.Comparator}): ",
+                        Value = cond.ValueString
+                    });
+                }
+            }
         }
 
         public bool IsEnabled
@@ -589,7 +598,7 @@ namespace AssemblyCodePlugin.UI
         private void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
             var newRule = new ClassificationRule { ElementTypeName = "Новый тип" };
-            var dlg = new RuleEditDialog(newRule) { Owner = this };
+            var dlg = new RuleEditDialog(newRule, _doc) { Owner = this };
             if (dlg.ShowDialog() == true)
             {
                 var row = new RuleRowViewModel(dlg.Result);
@@ -617,7 +626,7 @@ namespace AssemblyCodePlugin.UI
         private void EditSelected()
         {
             if (GridRules.SelectedItem is not RuleRowViewModel row) return;
-            var dlg = new RuleEditDialog(row.Rule) { Owner = this };
+            var dlg = new RuleEditDialog(row.Rule, _doc) { Owner = this };
             if (dlg.ShowDialog() == true)
             {
                 int idx = _rows.IndexOf(row);

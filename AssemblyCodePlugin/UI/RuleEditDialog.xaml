@@ -178,157 +178,116 @@
                 <Border Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,6,0,0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="190"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="14"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="14"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="14"/>
-                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
                                 <RowDefinition Height="14"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <!-- Категория -->
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Категория Revit:" Style="{StaticResource FieldLabel}"/>
-                            <ComboBox Grid.Row="0" Grid.Column="1" x:Name="CmbCategory" Height="32">
-                                <ComboBoxItem Content="OST_Walls — Стены"/>
-                                <ComboBoxItem Content="OST_Floors — Перекрытия"/>
-                                <ComboBoxItem Content="OST_StructuralFraming — Каркас несущих конструкций"/>
-                                <ComboBoxItem Content="OST_StructuralColumns — Несущие колонны"/>
-                                <ComboBoxItem Content="OST_GenericModel — Обобщённые модели"/>
-                                <ComboBoxItem Content="OST_StructuralFoundation — Фундаменты"/>
-                                <ComboBoxItem Content="OST_EdgeSlab — Монолитный пояс (EdgeSlab)"/>
-                            </ComboBox>
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="190"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Категория Revit:" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1" x:Name="CmbCategory" Height="32" SelectionChanged="CmbCategory_SelectionChanged">
+                                    <ComboBoxItem Content="OST_Walls — Стены"/>
+                                    <ComboBoxItem Content="OST_Floors — Перекрытия"/>
+                                    <ComboBoxItem Content="OST_StructuralFraming — Каркас несущих конструкций"/>
+                                    <ComboBoxItem Content="OST_StructuralColumns — Несущие колонны"/>
+                                    <ComboBoxItem Content="OST_GenericModel — Обобщённые модели"/>
+                                    <ComboBoxItem Content="OST_StructuralFoundation — Фундаменты"/>
+                                    <ComboBoxItem Content="OST_EdgeSlab — Монолитный пояс (EdgeSlab)"/>
+                                </ComboBox>
+                            </Grid>
 
-                            <!-- Семейство содержит (Чипы) -->
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Имя СЕМЕЙСТВА содержит:" Style="{StaticResource FieldLabel}"/>
-                            <StackPanel Grid.Row="2" Grid.Column="1">
-                                <ItemsControl ItemsSource="{Binding FamilyContainsTags}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Background="{StaticResource ChipBg}" CornerRadius="12" Padding="10,4,6,4" Margin="0,0,6,6">
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding}" FontSize="12" FontWeight="Medium" Margin="0,0,6,0"/>
-                                                    <Button Content="✕" Width="18" Height="18" FontSize="10" FontWeight="Bold"
-                                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                                            Foreground="{StaticResource TextSecondary}"
-                                                            Tag="{Binding}" Click="RemoveFamContains_Click"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <Grid Margin="0,4,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="100"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="TxtAddFamContains" Height="30" KeyDown="TxtAddFamContains_KeyDown"/>
-                                    <Button Grid.Column="1" Content="+ Добавить" Margin="6,0,0,0" Height="30" Style="{StaticResource SecondaryButton}" Click="BtnAddFamContains_Click"/>
-                                </Grid>
-                            </StackPanel>
+                            <!-- Режим объединения условий (И/ИЛИ) -->
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="190"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Правило объединения:" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1" x:Name="CmbLogicalOperator" Height="32">
+                                    <ComboBoxItem Content="Все условия должны выполняться (И)" Tag="AND"/>
+                                    <ComboBoxItem Content="Хотя бы одно условие должно выполняться (ИЛИ)" Tag="OR"/>
+                                </ComboBox>
+                            </Grid>
 
-                            <!-- Семейство исключает (Чипы) -->
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Имя СЕМЕЙСТВА исключает:" Style="{StaticResource FieldLabel}"/>
-                            <StackPanel Grid.Row="4" Grid.Column="1">
-                                <ItemsControl ItemsSource="{Binding FamilyNotContainsTags}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Background="{StaticResource ChipBg}" CornerRadius="12" Padding="10,4,6,4" Margin="0,0,6,6">
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding}" FontSize="12" FontWeight="Medium" Margin="0,0,6,0"/>
-                                                    <Button Content="✕" Width="18" Height="18" FontSize="10" FontWeight="Bold"
-                                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                                            Foreground="{StaticResource TextSecondary}"
-                                                            Tag="{Binding}" Click="RemoveFamNotContains_Click"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <Grid Margin="0,4,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="100"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="TxtAddFamNotContains" Height="30" KeyDown="TxtAddFamNotContains_KeyDown"/>
-                                    <Button Grid.Column="1" Content="+ Добавить" Margin="6,0,0,0" Height="30" Style="{StaticResource SecondaryButton}" Click="BtnAddFamNotContains_Click"/>
-                                </Grid>
-                            </StackPanel>
+                            <!-- Список условий отбора элементов -->
+                            <Border Grid.Row="4" Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Top" Text="Условия отбора элементов (можно выбрать или ввести любой параметр семейства/типа):" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,10"/>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding FilterConditions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,0,0,8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="2*"/>
+                                                            <ColumnDefinition Width="160"/>
+                                                            <ColumnDefinition Width="2*"/>
+                                                            <ColumnDefinition Width="36"/>
+                                                        </Grid.ColumnDefinitions>
 
-                            <!-- Имя ТИПА содержит (Чипы) -->
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Имя ТИПА содержит:" Style="{StaticResource FieldLabel}"/>
-                            <StackPanel Grid.Row="6" Grid.Column="1">
-                                <ItemsControl ItemsSource="{Binding TypeContainsTags}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Background="{StaticResource ChipBg}" CornerRadius="12" Padding="10,4,6,4" Margin="0,0,6,6">
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding}" FontSize="12" FontWeight="Medium" Margin="0,0,6,0"/>
-                                                    <Button Content="✕" Width="18" Height="18" FontSize="10" FontWeight="Bold"
-                                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                                            Foreground="{StaticResource TextSecondary}"
-                                                            Tag="{Binding}" Click="RemoveTypeContains_Click"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <Grid Margin="0,4,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="100"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="TxtAddTypeContains" Height="30" KeyDown="TxtAddTypeContains_KeyDown"/>
-                                    <Button Grid.Column="1" Content="+ Добавить" Margin="6,0,0,0" Height="30" Style="{StaticResource SecondaryButton}" Click="BtnAddTypeContains_Click"/>
-                                </Grid>
-                            </StackPanel>
+                                                        <!-- Параметр (выпадающий список или ручной ввод) -->
+                                                        <ComboBox Grid.Column="0"
+                                                                  IsEditable="True"
+                                                                  Text="{Binding ParamName, UpdateSourceTrigger=PropertyChanged}"
+                                                                  ItemsSource="{Binding AvailableParameters}"
+                                                                  Height="32" Margin="0,0,8,0"
+                                                                  ToolTip="Выберите параметр из списка или введите имя параметра вручную"/>
 
-                            <!-- Имя ТИПА исключает (Чипы) -->
-                            <TextBlock Grid.Row="8" Grid.Column="0" Text="Имя ТИПА исключает:" Style="{StaticResource FieldLabel}"/>
-                            <StackPanel Grid.Row="8" Grid.Column="1">
-                                <ItemsControl ItemsSource="{Binding TypeNotContainsTags}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Background="{StaticResource ChipBg}" CornerRadius="12" Padding="10,4,6,4" Margin="0,0,6,6">
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding}" FontSize="12" FontWeight="Medium" Margin="0,0,6,0"/>
-                                                    <Button Content="✕" Width="18" Height="18" FontSize="10" FontWeight="Bold"
-                                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                                            Foreground="{StaticResource TextSecondary}"
-                                                            Tag="{Binding}" Click="RemoveTypeNotContains_Click"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <Grid Margin="0,4,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="100"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="TxtAddTypeNotContains" Height="30" KeyDown="TxtAddTypeNotContains_KeyDown"/>
-                                    <Button Grid.Column="1" Content="+ Добавить" Margin="6,0,0,0" Height="30" Style="{StaticResource SecondaryButton}" Click="BtnAddTypeNotContains_Click"/>
-                                </Grid>
-                            </StackPanel>
+                                                        <!-- Условие сравнения -->
+                                                        <ComboBox Grid.Column="1"
+                                                                  SelectedValue="{Binding Comparator}"
+                                                                  SelectedValuePath="Content"
+                                                                  Height="32" Margin="0,0,8,0">
+                                                            <ComboBoxItem Content="Содержит"/>
+                                                            <ComboBoxItem Content="Не содержит"/>
+                                                            <ComboBoxItem Content="Равно"/>
+                                                            <ComboBoxItem Content="Не равно"/>
+                                                            <ComboBoxItem Content="Начинается с"/>
+                                                            <ComboBoxItem Content="Заканчивается на"/>
+                                                            <ComboBoxItem Content="Больше"/>
+                                                            <ComboBoxItem Content="Меньше"/>
+                                                            <ComboBoxItem Content="Больше или равно"/>
+                                                            <ComboBoxItem Content="Меньше или равно"/>
+                                                        </ComboBox>
+
+                                                        <!-- Значение для сравнения -->
+                                                        <TextBox Grid.Column="2"
+                                                                 Text="{Binding ValueString, UpdateSourceTrigger=PropertyChanged}"
+                                                                 Height="32" Margin="0,0,8,0"
+                                                                 VerticalContentAlignment="Center"
+                                                                 ToolTip="Значение, с которым сравнивается параметр"/>
+
+                                                        <!-- Кнопка удаления условия -->
+                                                        <Button Grid.Column="3"
+                                                                Style="{StaticResource IconButton}"
+                                                                Height="32" Width="32"
+                                                                Click="RemoveCondition_Click"
+                                                                Tag="{Binding}"
+                                                                ToolTip="Удалить это условие">
+                                                            <TextBlock Text="🗑️" FontSize="14"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Border>
+
+                            <Button Grid.Row="6" Content="+ Добавить условие фильтрации"
+                                    HorizontalAlignment="Left" Height="34" Padding="14,0"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Click="BtnAddCondition_Click"/>
                         </Grid>
                     </ScrollViewer>
                 </Border>

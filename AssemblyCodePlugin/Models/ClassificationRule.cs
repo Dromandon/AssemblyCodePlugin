@@ -5,6 +5,13 @@ using System.Runtime.Serialization;
 
 namespace AssemblyCodePlugin.Models
 {
+    public class FilterConditionRule
+    {
+        public string ParamName { get; set; } = "Имя типа";
+        public string Comparator { get; set; } = "Содержит"; // "Содержит", "Не содержит", "Равно", "Не равно", "Начинается с", "Заканчивается на", "Больше", "Меньше", "Больше или равно", "Меньше или равно"
+        public string ValueString { get; set; } = "";
+    }
+
     // ─── Фильтр для определения типа элемента ───────────────────────────────────
     public class RevitElementFilterRule
     {
@@ -12,34 +19,78 @@ namespace AssemblyCodePlugin.Models
         public string TargetCategory { get; set; } = "OST_Walls";
         public string CategoryDisplayName { get; set; } = "Стены";
 
-        // Имя семейства: хотя бы одна из этих строк должна содержаться в имени семейства
-        // (если список пуст — семейство не проверяется, используется TypeNameContainsAny)
-        public List<string> FamilyNameContainsAny { get; set; } = new List<string>();
-        // Имя семейства: ни одна из этих строк НЕ должна содержаться в имени семейства
-        public List<string> FamilyNameNotContains { get; set; } = new List<string>();
+        // Логика объединения: "AND" (Все условия должны выполняться) или "OR" (Хотя бы одно)
+        public string LogicalOperator { get; set; } = "AND";
 
-        // Имя типоразмера: хотя бы одна из этих строк должна содержаться (если FamilyNameContainsAny пуст)
+        // Список гибких условий фильтрации
+        public List<FilterConditionRule> Conditions { get; set; } = new List<FilterConditionRule>();
+
+        // Устаревшие поля для обратной совместимости (сохраняются, если Conditions пуст)
+        public List<string> FamilyNameContainsAny { get; set; } = new List<string>();
+        public List<string> FamilyNameNotContains { get; set; } = new List<string>();
         public List<string> TypeNameContainsAny { get; set; } = new List<string>();
-        // Имя типоразмера: ни одна из этих строк НЕ должна содержаться
         public List<string> TypeNameNotContains { get; set; } = new List<string>();
+
+        public List<FilterConditionRule> GetEffectiveConditions()
+        {
+            if (Conditions != null && Conditions.Count > 0)
+                return Conditions;
+
+            var list = new List<FilterConditionRule>();
+            if (FamilyNameContainsAny != null)
+            {
+                foreach (var s in FamilyNameContainsAny)
+                {
+                    if (!string.IsNullOrWhiteSpace(s))
+                        list.Add(new FilterConditionRule { ParamName = "Имя семейства", Comparator = "Содержит", ValueString = s.Trim() });
+                }
+            }
+            if (FamilyNameNotContains != null)
+            {
+                foreach (var s in FamilyNameNotContains)
+                {
+                    if (!string.IsNullOrWhiteSpace(s))
+                        list.Add(new FilterConditionRule { ParamName = "Имя семейства", Comparator = "Не содержит", ValueString = s.Trim() });
+                }
+            }
+            if (TypeNameContainsAny != null)
+            {
+                foreach (var s in TypeNameContainsAny)
+                {
+                    if (!string.IsNullOrWhiteSpace(s))
+                        list.Add(new FilterConditionRule { ParamName = "Имя типа", Comparator = "Содержит", ValueString = s.Trim() });
+                }
+            }
+            if (TypeNameNotContains != null)
+            {
+                foreach (var s in TypeNameNotContains)
+                {
+                    if (!string.IsNullOrWhiteSpace(s))
+                        list.Add(new FilterConditionRule { ParamName = "Имя типа", Comparator = "Не содержит", ValueString = s.Trim() });
+                }
+            }
+            return list;
+        }
 
         [IgnoreDataMember]
         public string DisplaySummary
         {
             get
             {
+                var conds = GetEffectiveConditions();
                 var parts = new List<string>();
                 parts.Add($"Кат.: {CategoryDisplayName}");
-                if (FamilyNameContainsAny.Count > 0)
-                    parts.Add($"Сем. содержит: {string.Join(" ИЛИ ", FamilyNameContainsAny)}");
-                if (FamilyNameNotContains.Count > 0)
-                    parts.Add($"Сем. не содержит: {string.Join(", ", FamilyNameNotContains)}");
-                if (TypeNameContainsAny.Count > 0)
-                    parts.Add($"Тип. содержит: {string.Join(" ИЛИ ", TypeNameContainsAny)}");
+                if (conds != null && conds.Count > 0)
+                {
+                    string joinOp = (LogicalOperator == "OR" || LogicalOperator == "ИЛИ") ? " ИЛИ " : " И ";
+                    var condDescs = conds.Select(c => $"{c.ParamName} {c.Comparator} \"{c.ValueString}\"");
+                    parts.Add(string.Join(joinOp, condDescs));
+                }
                 return string.Join("; ", parts);
             }
         }
     }
+
 
     // ─── Правило рейтингового поиска в классификаторе ───────────────────────────
     public class ClassifierSearchRule
