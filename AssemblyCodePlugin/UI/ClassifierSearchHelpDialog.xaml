@@ -111,21 +111,35 @@
                             <LineBreak/><LineBreak/>
                             <Run Text="• " FontWeight="Bold"/>
                             <Run Text="Почему не «Все слова»:" FontWeight="SemiBold"/>
-                            <Run Text=" В классификаторе формулировки могут различаться: «Балка», «Балки», «Устройство монолитных балок». Если мы запишем слово в «Все слова», можно случайно отсечь нужные строки."/>
+                            <Run Text=" В классификаторе формулировки могут различаться: «Балка», «Балки», «Устройство монолитных балок». Если мы запишем слово в «Все слова», можно случайно отсечь нужные строки, а внесение короткого корня «бал» даст нам слишком много лишних вариантов."/>
                             <LineBreak/>
                             <Run Text="• " FontWeight="Bold"/>
                             <Run Text="Список «Хотя бы одно слово»:" FontWeight="SemiBold"/>
                             <Run Text=" Записываем сюда вариации, которые ожидаем встретить: "/>
                             <Run Text="балка, Балки, Балок" FontFamily="Consolas" FontWeight="SemiBold"/>
-                            <Run Text=" (или общий корень "/>
-                            <Run Text="бал" FontFamily="Consolas" FontWeight="SemiBold"/>
-                            <Run Text=")."/>
+                            <Run Text="."/>
                             <LineBreak/>
                             <Run Text="• " FontWeight="Bold"/>
                             <Run Text="Список «Исключения»:" FontWeight="SemiBold"/>
                             <Run Text=" Так как ищем балку выше нуля и устройство конструкции, закидываем в исключения слова "/>
                             <Run Text="Подзем, Демонтаж" FontFamily="Consolas" FontWeight="SemiBold" Foreground="#DC2626"/>
                             <Run Text="."/>
+                            <LineBreak/>
+                            <Run Text="• " FontWeight="Bold"/>
+                            <Run Text="Бонусные баллы:" FontWeight="SemiBold"/>
+                            <Run Text=" В бонусные баллы включаем слово "/>
+                            <Run Text="монолит" FontFamily="Consolas" FontWeight="SemiBold"/>
+                            <Run Text=" с "/>
+                            <Run Text="1 баллом" FontWeight="SemiBold"/>
+                            <Run Text="."/>
+                            <LineBreak/><LineBreak/>
+                            <Run Text="Поиск балки ниже нуля (подземная часть):" FontWeight="Bold" Foreground="#1E3A8A"/>
+                            <LineBreak/>
+                            <Run Text="Для поиска балки ниже нуля будем использовать все те же условия, только из слов исключений уберём "/>
+                            <Run Text="Подзем" FontFamily="Consolas" FontWeight="SemiBold"/>
+                            <Run Text=" и добавим его в бонусные баллы с рейтингом "/>
+                            <Run Text="100" FontWeight="SemiBold"/>
+                            <Run Text=". Не исключено, что в классификаторе просто нет разделения элементов на выше и ниже нуля, поэтому слово идёт именно в бонусные баллы, а не во «Все слова»."/>
                         </TextBlock>
                     </StackPanel>
                 </Border>
