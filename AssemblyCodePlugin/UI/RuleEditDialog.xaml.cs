@@ -427,6 +427,12 @@ namespace AssemblyCodePlugin.UI
             CopyBonusRows(BelowBonusRows, AboveBonusRows);
         }
 
+        private void BtnHelpClassifierSearch_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new ClassifierSearchHelpDialog { Owner = this };
+            dlg.ShowDialog();
+        }
+
         private void BtnCheckAboveMatches_Click(object sender, RoutedEventArgs e)
         {
             CheckMatchesPreview(isUnderground: false);

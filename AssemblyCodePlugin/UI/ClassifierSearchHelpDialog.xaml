@@ -1,0 +1,150 @@
+<Window x:Class="AssemblyCodePlugin.UI.ClassifierSearchHelpDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Справка по настройке поиска кодов классификатора"
+        Width="680" Height="640"
+        MinWidth="520" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Background="#F8FAFC"
+        FontFamily="Segoe UI, Segoe UI Emoji">
+
+    <Window.Resources>
+        <!-- Кнопки -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#0F172A"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#334155"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock Text="📖 Правила и логика поиска кодов классификатора"
+                       FontSize="18" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
+        </DockPanel>
+
+        <!-- Основная прокручиваемая область справки -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+            <StackPanel>
+                <!-- 1. Введение и принцип «И» между списками -->
+                <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Общий принцип работы фильтров" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,8"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="#334155" LineHeight="19">
+                            <Run Text="Ниже на вкладке находятся 3 основных фильтра ключевых слов ("/>
+                            <Run Text="«Хотя бы одно слово»" FontWeight="SemiBold"/>
+                            <Run Text=", "/>
+                            <Run Text="«Все слова»" FontWeight="SemiBold"/>
+                            <Run Text=" и "/>
+                            <Run Text="«Исключения»" FontWeight="SemiBold"/>
+                            <Run Text=") и таблица бонусных баллов."/>
+                            <LineBreak/>
+                            <Run Text="Между тремя основными фильтрами действует логическое правило "/>
+                            <Run Text="«И» (AND)" FontWeight="Bold" Foreground="#2563EB"/>
+                            <Run Text=": чтобы позиция классификатора подошла, она должна одновременно удовлетворять условиям всех трёх списков."/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- 2. Описание трех условий -->
+                <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="1. Условие «Хотя бы одно слово (AnyTrue)» — логика ИЛИ" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,4"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#475569" Margin="0,0,0,12">
+                            Если в этот список добавлены слова, то в названии или описании позиции классификатора должно присутствовать <Run Text="хотя бы одно" FontWeight="SemiBold"/> из них, чтобы условие выполнилось.
+                        </TextBlock>
+
+                        <TextBlock Text="2. Условие «Все слова (AllTrue)» — логика И" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,4"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#475569" Margin="0,0,0,12">
+                            <Run Text="Все слова" FontWeight="SemiBold"/>, прописанные в данном условии, должны одновременно находиться в тексте классификатора, чтобы данное условие выполнялось.
+                        </TextBlock>
+
+                        <TextBlock Text="3. Условие «Исключения (Exceptions)» — логика НЕ" FontSize="13" FontWeight="Bold" Foreground="#DC2626" Margin="0,0,0,4"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#475569">
+                            <Run Text="Ни одно" FontWeight="SemiBold"/> из указанных в этом списке слов не должно присутствовать в классификаторе. Если в строке классификатора встречается хотя бы одно слово-исключение, позиция отбрасывается.
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. Бонусные баллы -->
+                <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Бонусные баллы (ExtraTrue)" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,6"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="#334155" LineHeight="19">
+                            <Run Text="Дополнительные необязательные слова. Их нахождение в строке классификатора не отсекает варианты, а "/>
+                            <Run Text="поднимает рейтинг" FontWeight="Bold" Foreground="#059669"/>
+                            <Run Text=" позиции среди других найденных на заданное количество баллов. Это помогает вывести наиболее точный код на первое место списка."/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- 4. Практический пример -->
+                <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="💡 Пример: поиск классификатора для балки" FontSize="14" FontWeight="Bold" Foreground="#1E3A8A" Margin="0,0,0,8"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="#1E40AF" LineHeight="19">
+                            <Run Text="Допустим, мы ищем код для надземной балки (нас интересует устройство монолитных балок)." FontWeight="SemiBold"/>
+                            <LineBreak/><LineBreak/>
+                            <Run Text="• " FontWeight="Bold"/>
+                            <Run Text="Почему не «Все слова»:" FontWeight="SemiBold"/>
+                            <Run Text=" В классификаторе формулировки могут различаться: «Балка», «Балки», «Устройство монолитных балок». Если мы запишем слово в «Все слова», можно случайно отсечь нужные строки."/>
+                            <LineBreak/>
+                            <Run Text="• " FontWeight="Bold"/>
+                            <Run Text="Список «Хотя бы одно слово»:" FontWeight="SemiBold"/>
+                            <Run Text=" Записываем сюда вариации, которые ожидаем встретить: "/>
+                            <Run Text="балка, Балки, Балок" FontFamily="Consolas" FontWeight="SemiBold"/>
+                            <Run Text=" (или общий корень "/>
+                            <Run Text="бал" FontFamily="Consolas" FontWeight="SemiBold"/>
+                            <Run Text=")."/>
+                            <LineBreak/>
+                            <Run Text="• " FontWeight="Bold"/>
+                            <Run Text="Список «Исключения»:" FontWeight="SemiBold"/>
+                            <Run Text=" Так как ищем балку выше нуля и устройство конструкции, закидываем в исключения слова "/>
+                            <Run Text="Подзем, Демонтаж" FontFamily="Consolas" FontWeight="SemiBold" Foreground="#DC2626"/>
+                            <Run Text="."/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- 5. Проверка результатов -->
+                <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <TextBlock Text="🔍 Проверка результатов в реальном времени" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,4"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#475569">
+                            Внизу вкладки доступна кнопка <Run Text="«🔍 Проверить, что найдётся»" FontWeight="SemiBold"/>. После проверки результатов, исходя из полученного списка, вы можете легко добавить новые слова в фильтры или исключения для идеальной точности поиска.
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Нижняя кнопка закрытия -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Понятно" Width="110" Height="34" Style="{StaticResource PrimaryButton}" IsDefault="True" IsCancel="True" Click="BtnClose_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

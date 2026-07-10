@@ -321,7 +321,7 @@
                 <Border Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,6,0,0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <!-- Кнопка копирования над всеми настройками вкладки -->
+                            <!-- Кнопки копирования и справки над всеми настройками вкладки -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,14">
                                 <Button x:Name="BtnCopyAboveToBelow"
                                         Style="{StaticResource SecondaryButton}"
@@ -332,6 +332,18 @@
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="📋" FontFamily="Segoe UI Emoji" FontSize="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                         <TextBlock Text="→ Подземная часть" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Height="32"
+                                        Padding="10,0"
+                                        Margin="10,0,0,0"
+                                        Click="BtnHelpClassifierSearch_Click"
+                                        ToolTip="Открыть справку и примеры по логике настройки поиска кодов классификатора">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="❓" FontFamily="Segoe UI Emoji" FontSize="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Справка по поиску кодов" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -518,7 +530,7 @@
                 <Border Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,6,0,0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <!-- Кнопка копирования над всеми настройками вкладки -->
+                            <!-- Кнопки копирования и справки над всеми настройками вкладки -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,14">
                                 <Button x:Name="BtnCopyBelowToAbove"
                                         Style="{StaticResource SecondaryButton}"
@@ -529,6 +541,18 @@
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="📋" FontFamily="Segoe UI Emoji" FontSize="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                         <TextBlock Text="→ Надземная часть" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Style="{StaticResource SecondaryButton}"
+                                        Height="32"
+                                        Padding="10,0"
+                                        Margin="10,0,0,0"
+                                        Click="BtnHelpClassifierSearch_Click"
+                                        ToolTip="Открыть справку и примеры по логике настройки поиска кодов классификатора">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="❓" FontFamily="Segoe UI Emoji" FontSize="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Справка по поиску кодов" FontSize="12" FontWeight="Normal" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
