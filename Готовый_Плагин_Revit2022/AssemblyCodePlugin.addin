@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Command">
+    <Assembly>AssemblyCodePlugin.dll</Assembly>
+    <ClientId>B724391F-81D2-4E38-B27E-513D410F1D9A</ClientId>
+    <FullClassName>AssemblyCodePlugin.Command</FullClassName>
+    <Text>Заполнить кодификатор</Text>
+    <Description>Открывает окно настроек и запуск автоматического заполнения кодификатора</Description>
+    <VisibilityMode>AlwaysVisible</VisibilityMode>
+    <VendorId>ANTIGRAVITY</VendorId>
+    <VendorDescription>Antigravity AI Revit Tools</VendorDescription>
+  </AddIn>
+</RevitAddIns>

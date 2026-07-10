@@ -1,0 +1,60 @@
+<Window x:Class="AssemblyCodePlugin.UI.ProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Обработка модели AssemblyCode" Height="320" Width="580"
+        WindowStartupLocation="CenterScreen" Background="#F4F4F5" Foreground="#18181B"
+        FontFamily="Segoe UI" ResizeMode="NoResize" ShowInTaskbar="True">
+    <Window.Resources>
+        <SolidColorBrush x:Key="ApexRed"       Color="#E23E2E"/>
+        <SolidColorBrush x:Key="BorderColor"   Color="#D4D4D8"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#71717A"/>
+        <SolidColorBrush x:Key="TextPrimary"   Color="#18181B"/>
+        <SolidColorBrush x:Key="SurfaceWhite"  Color="#FFFFFF"/>
+    </Window.Resources>
+
+    <Border Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" Margin="14" CornerRadius="8">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Шапка -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,16">
+                <Border Width="10" Height="24" Background="{StaticResource ApexRed}" CornerRadius="2" Margin="0,0,12,0"/>
+                <TextBlock Text="Выполнение обработки модели" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}"/>
+            </StackPanel>
+
+            <!-- Текущий статус -->
+            <TextBlock x:Name="TxtStatus" Grid.Row="1" Text="Подготовка к обработке..." FontSize="13" FontWeight="Medium" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+            <!-- Прогресс-бар -->
+            <ProgressBar x:Name="PbProgress" Grid.Row="2" Height="14" Minimum="0" Maximum="100" Value="0" Margin="0,0,0,16"/>
+
+            <!-- Информационная строка с прогнозом и временем -->
+            <Grid Grid.Row="3" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,16,0">
+                    <TextBlock x:Name="TxtDetails" Text="Обработка элементов..." FontSize="12" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="TxtEstimate" Text="Расчет примерного времени..." FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtTimer" Text="00:00" FontSize="18" FontWeight="Bold" Foreground="{StaticResource ApexRed}" HorizontalAlignment="Right"/>
+                    <TextBlock Text="Прошло времени" FontSize="10" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Right"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Подсказка -->
+            <TextBlock Grid.Row="4" Text="ℹ Во время применения изменений (Commit) ядро Revit перестраивает геометрические соединения стен и перекрытий." 
+                       FontSize="11" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" VerticalAlignment="Bottom" FontStyle="Italic"/>
+        </Grid>
+    </Border>
+</Window>
