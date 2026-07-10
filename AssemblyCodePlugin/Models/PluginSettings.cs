@@ -24,6 +24,11 @@ namespace AssemblyCodePlugin.Models
         public double WindowHeight { get; set; } = 720;
         public bool IsWindowMaximized { get; set; } = false;
 
+        // Габариты окна настройки правила классификации
+        public double RuleEditDialogWidth { get; set; } = 820;
+        public double RuleEditDialogHeight { get; set; } = 640;
+        public bool IsRuleEditDialogMaximized { get; set; } = false;
+
         // Ширины столбцов таблицы (в пикселях)
         public double ColTypeWidth { get; set; } = 160;
         public double ColAboveWidth { get; set; } = 340;

@@ -584,11 +584,35 @@ namespace AssemblyCodePlugin.UI
 
         // ─── Кнопки управления таблицей ──────────────────────────────────────────
 
+        private bool? ConfigureAndShowRuleEditDialog(RuleEditDialog dlg)
+        {
+            if (_settings != null)
+            {
+                if (_settings.RuleEditDialogWidth > 400) dlg.Width = _settings.RuleEditDialogWidth;
+                if (_settings.RuleEditDialogHeight > 300) dlg.Height = _settings.RuleEditDialogHeight;
+                if (_settings.IsRuleEditDialogMaximized) dlg.WindowState = WindowState.Maximized;
+            }
+
+            bool? result = dlg.ShowDialog();
+
+            if (_settings != null)
+            {
+                _settings.IsRuleEditDialogMaximized = (dlg.WindowState == WindowState.Maximized);
+                if (dlg.WindowState == WindowState.Normal)
+                {
+                    _settings.RuleEditDialogWidth = dlg.Width;
+                    _settings.RuleEditDialogHeight = dlg.Height;
+                }
+            }
+
+            return result;
+        }
+
         private void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
             var newRule = new ClassificationRule { ElementTypeName = "Новый тип" };
             var dlg = new RuleEditDialog(newRule, _doc) { Owner = this };
-            if (dlg.ShowDialog() == true)
+            if (ConfigureAndShowRuleEditDialog(dlg) == true)
             {
                 var row = new RuleRowViewModel(dlg.Result);
                 _rows.Add(row);
@@ -616,7 +640,7 @@ namespace AssemblyCodePlugin.UI
         {
             if (GridRules.SelectedItem is not RuleRowViewModel row) return;
             var dlg = new RuleEditDialog(row.Rule, _doc) { Owner = this };
-            if (dlg.ShowDialog() == true)
+            if (ConfigureAndShowRuleEditDialog(dlg) == true)
             {
                 int idx = _rows.IndexOf(row);
                 if (idx >= 0)
