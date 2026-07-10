@@ -188,6 +188,29 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="FeedbackButton" TargetType="Button">
+            <Setter Property="Background" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="6" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#E2E8F0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="18">
@@ -470,7 +493,38 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Column="0" x:Name="TxtStatus" Text="Готов к проверке и запуску" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}"/>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock x:Name="TxtStatus" Text="Готов к проверке и запуску" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" Margin="0,0,14,0"/>
+
+                <Rectangle Width="1" Height="18" Fill="{StaticResource BorderColor}" Margin="0,0,14,0"/>
+
+                <TextBlock Text="Обратная связь:" FontSize="12" FontWeight="SemiBold" Foreground="#475569" VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                <!-- Кнопка 1: Apex Messenger -->
+                <Button Style="{StaticResource FeedbackButton}" Height="30" Padding="8,0" Margin="0,0,8,0"
+                        Click="BtnOpenApexMessenger_Click" Cursor="Hand"
+                        ToolTip="Написать в корпоративный мессенджер Apex (@mikhail.davtyan)">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Width="18" Height="18" CornerRadius="9" Background="#E23E2E" Margin="0,0,6,0">
+                            <TextBlock Text="a" Foreground="White" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
+                        </Border>
+                        <TextBlock Text="Apex Messenger" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Кнопка 2: Telegram -->
+                <Button Style="{StaticResource FeedbackButton}" Height="30" Padding="8,0"
+                        Click="BtnOpenTelegram_Click" Cursor="Hand"
+                        ToolTip="Написать в Telegram (@Dromandon)">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Grid Width="18" Height="18" Margin="0,0,6,0">
+                            <Ellipse Fill="#2AABEE" Width="18" Height="18"/>
+                            <Path Data="M 3.8,9 L 14.2,4.8 L 12,13.8 L 8.8,10.6 L 12.6,6.8 L 7.5,9.6 Z" Fill="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <TextBlock Text="Telegram" FontSize="12" Foreground="#0F172A" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Content="Сохранить настройки" Width="150" Height="36" Margin="0,0,10,0" Style="{StaticResource SecondaryButton}" Click="BtnSave_Click"/>
