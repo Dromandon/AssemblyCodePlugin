@@ -211,6 +211,37 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Сам тумблер (Пилюля 38x22) -->
+                            <Grid Width="38" Height="22" Margin="0,0,10,0">
+                                <Border x:Name="Track" CornerRadius="11" Background="#E2E8F0" BorderBrush="#CBD5E1" BorderThickness="1"/>
+                                <Ellipse x:Name="Thumb" Width="16" Height="16" Fill="White" HorizontalAlignment="Left" Margin="3,0,0,0">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect ShadowDepth="1" BlurRadius="3" Opacity="0.2"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                            </Grid>
+                            <!-- Подпись рядом -->
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="#0EA5E9"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="#0284C7"/>
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="Thumb" Property="Margin" Value="0,0,3,0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="18">
@@ -242,69 +273,110 @@
             </DockPanel>
         </Border>
 
-        <!-- Верхняя карточка: Настройки уровней нуля и параметров -->
-        <Border Grid.Row="1" Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,14">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="150"/>
-                    <ColumnDefinition Width="65"/>
-                    <ColumnDefinition Width="20"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="150"/>
-                    <ColumnDefinition Width="65"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="8"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="10"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+        <!-- Верхний блок настроек (две аккуратные карточки) -->
+        <Grid Grid.Row="1" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="7*"/>
+            </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Нижний ноль:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
-                <ComboBox Grid.Row="0" Grid.Column="1" x:Name="CmbLowLevel"/>
-                <TextBox Grid.Row="0" Grid.Column="2" x:Name="TxtLowOffset" Margin="6,0,0,0" ToolTip="Смещение (мм)"/>
+            <!-- КАРТОЧКА 1: Отметка нулевого уровня здания -->
+            <Border Grid.Column="0" Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16,14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="12"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="10"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="4" Text="Верхний ноль:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
-                <ComboBox Grid.Row="0" Grid.Column="5" x:Name="CmbHighLevel"/>
-                <TextBox Grid.Row="0" Grid.Column="6" x:Name="TxtHighOffset" Margin="6,0,0,0" ToolTip="Смещение (мм)"/>
+                    <!-- Заголовок карточки -->
+                    <DockPanel Grid.Row="0" LastChildFill="True">
+                        <Border Width="24" Height="24" CornerRadius="6" Background="#EFF6FF" Margin="0,0,8,0">
+                            <TextBlock Text="🏢" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Отметка нуля здания (диапазон плит)" FontWeight="Bold" FontSize="13" Foreground="#0F172A" VerticalAlignment="Center"/>
+                    </DockPanel>
 
-                <!-- Строка 2: Параметр кода по классификатору и Кнопка настройки идентификатора -->
-                <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="8" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Параметр для заполнения кода по классификатору:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Foreground="#0F172A"/>
-                    <ComboBox x:Name="CmbAssemblyCodeParam" IsEditable="True" Width="230" Height="28" Margin="0,0,16,0"/>
+                    <!-- Нижний ноль -->
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="75"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Нижний ноль:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155"/>
+                        <ComboBox Grid.Column="1" x:Name="CmbLowLevel" Height="28" Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="2" x:Name="TxtLowOffset" Height="28" ToolTip="Смещение от уровня (мм)" Padding="6,4"/>
+                    </Grid>
 
-                    <Button x:Name="BtnConfigureUndergroundId"
-                            Content="⚙️ Настройка идентификатора надземной/подземной части..."
-                            Style="{StaticResource ToolButton}" Height="28" Padding="12,0"
-                            Click="BtnConfigureUndergroundId_Click"
-                            ToolTip="Настроить параметр и значения для надземной/подземной зоны"/>
-                </StackPanel>
+                    <!-- Верхний ноль -->
+                    <Grid Grid.Row="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="75"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Верхний ноль:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155"/>
+                        <ComboBox Grid.Column="1" x:Name="CmbHighLevel" Height="28" Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="2" x:Name="TxtHighOffset" Height="28" ToolTip="Смещение от уровня (мм)" Padding="6,4"/>
+                    </Grid>
+                </Grid>
+            </Border>
 
-                <!-- Общая настройка суффикса BGL -->
-                <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="8" Orientation="Vertical" Margin="0,2,0,0">
-                    <CheckBox x:Name="ChkNeverAddBglSuffix"
-                              VerticalAlignment="Center"
-                              VerticalContentAlignment="Center">
-                        <TextBlock Text="Не добавлять суффикс _BGL для подземной части"
-                                   FontWeight="SemiBold"
-                                   Foreground="#1E293B"/>
-                    </CheckBox>
-                    <TextBlock FontSize="11"
-                               Foreground="#64748B"
-                               TextWrapping="Wrap"
-                               Margin="22,3,0,0">
-                        <Run Text="Для случаев, когда:" FontWeight="Medium"/>
-                        <LineBreak/>
-                        <Run Text="1. Код по классификатору и индентификатор надземной/подземной части здания записываются в параметры экземпляра."/>
-                        <LineBreak/>
-                        <Run Text="2. Код по классификатору индентичен для надземной и подземной части здания, а индентификатор надземной/подземной части здания записывается в параметры экземпляра."/>
-                    </TextBlock>
-                </StackPanel>
-            </Grid>
-        </Border>
+            <!-- КАРТОЧКА 2: Целевые параметры и режим записи -->
+            <Border Grid.Column="2" Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16,14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="12"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="14"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Заголовок карточки -->
+                    <DockPanel Grid.Row="0" LastChildFill="True">
+                        <Border Width="24" Height="24" CornerRadius="6" Background="#F0FDF4" Margin="0,0,8,0">
+                            <TextBlock Text="⚙️" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Целевые параметры и режим записи" FontWeight="Bold" FontSize="13" Foreground="#0F172A" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <!-- Параметры: Код классификатора и кнопка настройки идентификатора -->
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Параметр кода:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Column="1" x:Name="CmbAssemblyCodeParam" IsEditable="True" Height="28" Margin="0,0,10,0"/>
+                        <Button Grid.Column="2" x:Name="BtnConfigureUndergroundId"
+                                Content="⚙️ Идентификатор зоны (надземная / подземная)..."
+                                Style="{StaticResource ToolButton}" Height="28" Padding="12,0"
+                                Click="BtnConfigureUndergroundId_Click"
+                                ToolTip="Настроить параметр и значения для надземной и подземной части"/>
+                    </Grid>
+
+                    <!-- Переключатель суффикса BGL с подсказкой -->
+                    <Grid Grid.Row="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Grid.Column="0" x:Name="ChkNeverAddBglSuffix" Style="{StaticResource ToggleSwitchStyle}" VerticalAlignment="Center">
+                            <TextBlock Text="Не добавлять суффикс _BGL для подземной части" FontWeight="SemiBold" Foreground="#1E293B"/>
+                        </CheckBox>
+                        <TextBlock Grid.Column="1" Text="ℹ️ Применяется при записи в параметры экземпляра"
+                                   FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="14,0,0,0"
+                                   ToolTip="Для случаев, когда: 1. Код по классификатору и идентификатор зоны записываются в параметры экземпляра; 2. Код идентичен для обеих частей, а идентификатор зоны пишется в экземпляр."/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
 
         <!-- Центральная область: Таблица правил и аккуратная нижняя панель инструментов -->
         <Grid Grid.Row="2">
