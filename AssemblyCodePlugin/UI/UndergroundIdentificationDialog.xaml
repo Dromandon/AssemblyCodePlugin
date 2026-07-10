@@ -1,0 +1,151 @@
+<Window x:Class="AssemblyCodePlugin.UI.UndergroundIdentificationDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Настройка идентификатора надземной/подземной части"
+        Height="420" Width="560" MinHeight="360" MinWidth="480"
+        WindowStartupLocation="CenterOwner" Background="#F8FAFC" Foreground="#1E293B"
+        FontFamily="Segoe UI">
+    <Window.Resources>
+        <SolidColorBrush x:Key="ApexRed" Color="#E23E2E"/>
+        <SolidColorBrush x:Key="BorderColor" Color="#CBD5E1"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#0F172A"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#475569"/>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource ApexRed}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#C0342A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F1F5F9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Описание -->
+        <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,16">
+            <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="{StaticResource TextSecondary}" LineHeight="19">
+                <Run Text="Выберите параметр для идентификации надземной/подземной части элемента и укажите значения, которые плагин будет записывать в этот параметр для каждой зоны."/>
+            </TextBlock>
+        </Border>
+
+        <!-- Выбор параметра -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,18">
+            <DockPanel LastChildFill="True" Margin="0,0,0,6">
+                <TextBlock Text="1. Параметр идентификатора:" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TxtParamTypeHint" Text="Тип: Текст / Число" HorizontalAlignment="Right" FontSize="12" Foreground="#64748B"/>
+            </DockPanel>
+            <ComboBox x:Name="CmbParamName" IsEditable="True" SelectionChanged="CmbParamName_SelectionChanged" TextBoxBase.TextChanged="CmbParamName_TextChanged"/>
+        </StackPanel>
+
+        <!-- Настройка значений для подземной и надземной части -->
+        <Border Grid.Row="2" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="2. Значения для зон элемента:" FontWeight="SemiBold" FontSize="13"/>
+
+                <!-- Подземная часть -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Идентификатор подземной части:" VerticalAlignment="Center" FontWeight="Medium"/>
+                    <!-- Текстовый ввод (для String/Integer/Double) -->
+                    <TextBox Grid.Column="1" x:Name="TxtUndergroundValue"/>
+                    <!-- Выпадающий список (для YesNo) -->
+                    <ComboBox Grid.Column="1" x:Name="CmbUndergroundYesNo" Visibility="Collapsed" SelectionChanged="CmbUndergroundYesNo_SelectionChanged"/>
+                </Grid>
+
+                <!-- Надземная часть -->
+                <Grid Grid.Row="4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Идентификатор надземной части:" VerticalAlignment="Center" FontWeight="Medium"/>
+                    <!-- Текстовый ввод (для String/Integer/Double) -->
+                    <TextBox Grid.Column="1" x:Name="TxtAbovegroundValue"/>
+                    <!-- Выпадающий список (для YesNo) -->
+                    <ComboBox Grid.Column="1" x:Name="CmbAbovegroundYesNo" Visibility="Collapsed"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Нижние кнопки -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Сохранить" Style="{StaticResource PrimaryButton}" Width="120" Height="34" Margin="0,0,10,0" Click="BtnSave_Click"/>
+            <Button Content="Отмена" Style="{StaticResource SecondaryButton}" Width="90" Height="34" Click="BtnCancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

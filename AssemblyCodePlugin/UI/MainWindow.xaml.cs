@@ -265,6 +265,7 @@ namespace AssemblyCodePlugin.UI
         private PluginSettings _settings;
         private readonly ObservableCollection<RuleRowViewModel> _rows;
         private bool _runRequested = false;
+        private List<ParamInfo> _availableParams = new List<ParamInfo>();
 
         public bool RunRequested => _runRequested;
         public PluginSettings ResultSettings => _settings;
@@ -276,6 +277,13 @@ namespace AssemblyCodePlugin.UI
             _doc = doc;
             _uiApp = uiApp;
             _settings = settings;
+
+            _availableParams = ParameterCollector.CollectParameters(_doc);
+            if (CmbAssemblyCodeParam != null)
+            {
+                CmbAssemblyCodeParam.ItemsSource = _availableParams;
+            }
+
             _rows = new ObservableCollection<RuleRowViewModel>(
                 settings.Rules.Select(r => new RuleRowViewModel(r)));
             GridRules.ItemsSource = _rows;
@@ -517,9 +525,35 @@ namespace AssemblyCodePlugin.UI
             CmbHighLevel.SelectedItem = s.ZeroLevel.HighLevelName;
             TxtLowOffset.Text = s.ZeroLevel.LowLevelOffsetMm.ToString();
             TxtHighOffset.Text = s.ZeroLevel.HighLevelOffsetMm.ToString();
-            TxtAssemblyParam.Text = s.AssemblyCodeParamName;
-            TxtUndergroundParam.Text = s.UndergroundParamName;
+
+            if (CmbAssemblyCodeParam != null)
+            {
+                var match = _availableParams.FirstOrDefault(p => string.Equals(p.Name, s.AssemblyCodeParamName, StringComparison.OrdinalIgnoreCase));
+                if (match != null) CmbAssemblyCodeParam.SelectedItem = match;
+                else CmbAssemblyCodeParam.Text = s.AssemblyCodeParamName;
+            }
+
             if (ChkNeverAddBglSuffix != null) ChkNeverAddBglSuffix.IsChecked = s.NeverAddBglSuffix;
+        }
+
+        private void BtnConfigureUndergroundId_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new UndergroundIdentificationDialog(
+                _availableParams,
+                _settings.UndergroundParamName,
+                _settings.UndergroundValueText,
+                _settings.AbovegroundValueText,
+                _settings.IsUndergroundParamYesNo
+            ) { Owner = this };
+
+            if (dlg.ShowDialog() == true)
+            {
+                _settings.UndergroundParamName = dlg.ResultParamName;
+                _settings.UndergroundValueText = dlg.ResultUndergroundValue;
+                _settings.AbovegroundValueText = dlg.ResultAbovegroundValue;
+                _settings.IsUndergroundParamYesNo = dlg.ResultIsYesNo;
+                SetStatus($"Идентификатор зоны: {_settings.UndergroundParamName} ({_settings.UndergroundValueText} / {_settings.AbovegroundValueText})");
+            }
         }
 
         private void SaveUiToSettings()
@@ -539,8 +573,7 @@ namespace AssemblyCodePlugin.UI
             _settings.ZeroLevel.HighLevelName = CmbHighLevel.SelectedItem as string ?? "";
             _settings.ZeroLevel.LowLevelOffsetMm = TryParseDouble(TxtLowOffset.Text);
             _settings.ZeroLevel.HighLevelOffsetMm = TryParseDouble(TxtHighOffset.Text);
-            _settings.AssemblyCodeParamName = TxtAssemblyParam.Text?.Trim() ?? "Код по классификатору";
-            _settings.UndergroundParamName = TxtUndergroundParam.Text?.Trim() ?? "FAM_Underground";
+            _settings.AssemblyCodeParamName = CmbAssemblyCodeParam.Text?.Trim() ?? "Код по классификатору";
             if (ChkNeverAddBglSuffix != null) _settings.NeverAddBglSuffix = ChkNeverAddBglSuffix.IsChecked == true;
             _settings.LastClassifierFileName = currentClassifier;
 

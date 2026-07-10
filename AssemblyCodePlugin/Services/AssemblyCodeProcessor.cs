@@ -420,20 +420,54 @@ namespace AssemblyCodePlugin.Services
         {
             if (elem == null || string.IsNullOrEmpty(paramName)) return false;
             var param = elem.LookupParameter(paramName);
-            return param != null && !param.IsReadOnly && param.StorageType == StorageType.String;
+            return param != null && !param.IsReadOnly;
         }
 
         private static bool TrySetStringParamIfChanged(Element elem, string paramName, string value)
         {
             if (elem == null || string.IsNullOrEmpty(paramName)) return false;
             var param = elem.LookupParameter(paramName);
-            if (param != null && !param.IsReadOnly && param.StorageType == StorageType.String)
+            if (param == null || param.IsReadOnly) return false;
+
+            if (param.StorageType == StorageType.String)
             {
                 string currentVal = param.AsString();
                 if (!string.Equals(currentVal, value, StringComparison.Ordinal))
                 {
-                    param.Set(value);
+                    param.Set(value ?? "");
                     return true;
+                }
+            }
+            else if (param.StorageType == StorageType.Integer)
+            {
+                int targetInt = 0;
+                if (string.Equals(value, "Да", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(value, "Yes", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(value, "True", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(value, "1", StringComparison.Ordinal))
+                {
+                    targetInt = 1;
+                }
+                else
+                {
+                    int.TryParse(value, out targetInt);
+                }
+
+                if (param.AsInteger() != targetInt)
+                {
+                    param.Set(targetInt);
+                    return true;
+                }
+            }
+            else if (param.StorageType == StorageType.Double)
+            {
+                if (double.TryParse(value, out double targetDouble))
+                {
+                    if (Math.Abs(param.AsDouble() - targetDouble) > 1e-6)
+                    {
+                        param.Set(targetDouble);
+                        return true;
+                    }
                 }
             }
             return false;

@@ -9,6 +9,7 @@ namespace AssemblyCodePlugin.Models
         public string UndergroundParamName { get; set; } = "FAM_Underground";
         public string UndergroundValueText { get; set; } = "Подземная часть";
         public string AbovegroundValueText { get; set; } = "Надземная часть";
+        public bool IsUndergroundParamYesNo { get; set; } = false;
 
         // Общая настройка: не добавлять суффикс _BGL для подземной части
         public bool NeverAddBglSuffix { get; set; } = false;
