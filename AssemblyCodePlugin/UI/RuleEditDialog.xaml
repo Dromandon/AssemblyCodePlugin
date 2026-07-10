@@ -481,6 +481,33 @@
                                 </Grid>
                             </StackPanel>
                         </Grid>
+
+                            <!-- Панель проверки того, что найдётся по правилам надземной части -->
+                            <Border Margin="0,18,0,0" Background="#F8FAFC" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="🔍 Проверить, что найдётся"
+                                                Height="34" Padding="16,0"
+                                                Style="{StaticResource SecondaryButton}"
+                                                Click="BtnCheckAboveMatches_Click"/>
+                                    </StackPanel>
+
+                                    <!-- Отображение списка найденного в том же виде, как на главной странице -->
+                                    <Border Margin="0,10,0,0" Background="White" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="10,8">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedAbovePreviewPath}"
+                                                       FontSize="11" Foreground="#64748B"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Margin="2,0,0,4"/>
+                                            <ComboBox Height="30"
+                                                      ItemsSource="{Binding AbovePreviewMatches}"
+                                                      SelectedItem="{Binding SelectedAbovePreviewMatch, UpdateSourceTrigger=PropertyChanged}"
+                                                      HorizontalAlignment="Stretch"
+                                                      HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
@@ -651,6 +678,33 @@
                                 </Grid>
                             </StackPanel>
                         </Grid>
+
+                            <!-- Панель проверки того, что найдётся по правилам подземной части -->
+                            <Border Margin="0,18,0,0" Background="#F8FAFC" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="🔍 Проверить, что найдётся"
+                                                Height="34" Padding="16,0"
+                                                Style="{StaticResource SecondaryButton}"
+                                                Click="BtnCheckBelowMatches_Click"/>
+                                    </StackPanel>
+
+                                    <!-- Отображение списка найденного в том же виде, как на главной странице -->
+                                    <Border Margin="0,10,0,0" Background="White" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="6" Padding="10,8">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedBelowPreviewPath}"
+                                                       FontSize="11" Foreground="#64748B"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Margin="2,0,0,4"/>
+                                            <ComboBox Height="30"
+                                                      ItemsSource="{Binding BelowPreviewMatches}"
+                                                      SelectedItem="{Binding SelectedBelowPreviewMatch, UpdateSourceTrigger=PropertyChanged}"
+                                                      HorizontalAlignment="Stretch"
+                                                      HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

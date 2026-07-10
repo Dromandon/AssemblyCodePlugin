@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AssemblyCodePlugin.Models;
+using AssemblyCodePlugin.Services;
 using Autodesk.Revit.DB;
 
 namespace AssemblyCodePlugin.UI
@@ -48,8 +49,12 @@ namespace AssemblyCodePlugin.UI
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    public partial class RuleEditDialog : Window
+    public partial class RuleEditDialog : Window, INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string name) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
         private readonly ClassificationRule _source;
         private readonly Document _doc;
         public ClassificationRule Result { get; private set; }
@@ -73,6 +78,50 @@ namespace AssemblyCodePlugin.UI
         public ObservableCollection<string> BelowAllTrueTags { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> BelowExceptionsTags { get; } = new ObservableCollection<string>();
         public ObservableCollection<BonusWordRow> BelowBonusRows { get; } = new ObservableCollection<BonusWordRow>();
+
+        private readonly Dictionary<string, string> _previewPathToCodeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public ObservableCollection<string> AbovePreviewMatches { get; } = new ObservableCollection<string>();
+
+        private string _selectedAbovePreviewMatch;
+        public string SelectedAbovePreviewMatch
+        {
+            get => _selectedAbovePreviewMatch;
+            set
+            {
+                if (_selectedAbovePreviewMatch != value)
+                {
+                    _selectedAbovePreviewMatch = value;
+                    OnPropertyChanged(nameof(SelectedAbovePreviewMatch));
+                    OnPropertyChanged(nameof(SelectedAbovePreviewPath));
+                }
+            }
+        }
+
+        public string SelectedAbovePreviewPath =>
+            (_selectedAbovePreviewMatch != null && _previewPathToCodeMap.TryGetValue(_selectedAbovePreviewMatch, out var p) && !string.IsNullOrEmpty(p))
+            ? $"📁 {p}" : "";
+
+        public ObservableCollection<string> BelowPreviewMatches { get; } = new ObservableCollection<string>();
+
+        private string _selectedBelowPreviewMatch;
+        public string SelectedBelowPreviewMatch
+        {
+            get => _selectedBelowPreviewMatch;
+            set
+            {
+                if (_selectedBelowPreviewMatch != value)
+                {
+                    _selectedBelowPreviewMatch = value;
+                    OnPropertyChanged(nameof(SelectedBelowPreviewMatch));
+                    OnPropertyChanged(nameof(SelectedBelowPreviewPath));
+                }
+            }
+        }
+
+        public string SelectedBelowPreviewPath =>
+            (_selectedBelowPreviewMatch != null && _previewPathToCodeMap.TryGetValue(_selectedBelowPreviewMatch, out var p) && !string.IsNullOrEmpty(p))
+            ? $"📁 {p}" : "";
 
         private static readonly (string Display, string BIC, string DisplayName)[] Categories =
         {
@@ -376,6 +425,88 @@ namespace AssemblyCodePlugin.UI
             CopyRuleCollection(BelowAllTrueTags, AboveAllTrueTags);
             CopyRuleCollection(BelowExceptionsTags, AboveExceptionsTags);
             CopyBonusRows(BelowBonusRows, AboveBonusRows);
+        }
+
+        private void BtnCheckAboveMatches_Click(object sender, RoutedEventArgs e)
+        {
+            CheckMatchesPreview(isUnderground: false);
+        }
+
+        private void BtnCheckBelowMatches_Click(object sender, RoutedEventArgs e)
+        {
+            CheckMatchesPreview(isUnderground: true);
+        }
+
+        private void CheckMatchesPreview(bool isUnderground)
+        {
+            if (_doc == null)
+            {
+                MessageBox.Show("Документ Revit не подключен, невозможно прочитать классификатор.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                var (classifierItems, byCode) = AssemblyCodeTableReader.ReadClassifier(_doc);
+                if (classifierItems == null || classifierItems.Count == 0)
+                {
+                    MessageBox.Show("Файл классификатора Assembly Code не задан или пуст в документе Revit.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                _previewPathToCodeMap.Clear();
+                foreach (var item in classifierItems)
+                {
+                    if (item == null || string.IsNullOrEmpty(item.Code)) continue;
+                    string str = $"{item.Code} — {item.Description}";
+                    _previewPathToCodeMap[str] = item.CategoryPath ?? "";
+                }
+
+                var rule = isUnderground
+                    ? new ClassifierSearchRule
+                    {
+                        AnyTrue = BelowAnyTrueTags.ToList(),
+                        AllTrue = BelowAllTrueTags.ToList(),
+                        Exceptions = BelowExceptionsTags.ToList(),
+                        ExtraTrue = BelowBonusRows.ToDictionary(r => r.Word, r => r.Points, StringComparer.OrdinalIgnoreCase)
+                    }
+                    : new ClassifierSearchRule
+                    {
+                        AnyTrue = AboveAnyTrueTags.ToList(),
+                        AllTrue = AboveAllTrueTags.ToList(),
+                        Exceptions = AboveExceptionsTags.ToList(),
+                        ExtraTrue = AboveBonusRows.ToDictionary(r => r.Word, r => r.Points, StringComparer.OrdinalIgnoreCase)
+                    };
+
+                var matches = ClassifierRatingEngine.FindPositiveMatches(classifierItems, byCode, rule, isUnderground);
+
+                var targetCollection = isUnderground ? BelowPreviewMatches : AbovePreviewMatches;
+                targetCollection.Clear();
+
+                if (matches != null && matches.Count > 0)
+                {
+                    foreach (var m in matches)
+                    {
+                        targetCollection.Add($"{m.Code} — {m.Description}");
+                    }
+                    if (isUnderground)
+                        SelectedBelowPreviewMatch = targetCollection.First();
+                    else
+                        SelectedAbovePreviewMatch = targetCollection.First();
+                }
+                else
+                {
+                    targetCollection.Add("⚠️ Не удалось автоматически найти подходящее значение");
+                    if (isUnderground)
+                        SelectedBelowPreviewMatch = targetCollection.First();
+                    else
+                        SelectedAbovePreviewMatch = targetCollection.First();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при проверке классификатора:\n{ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private ClassificationRule BuildRule()
