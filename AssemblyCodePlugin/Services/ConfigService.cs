@@ -212,6 +212,23 @@ namespace AssemblyCodePlugin.Services
         // ─────────────────────────────────────────────────────────────────────────
         public static PluginSettings GetDefaults()
         {
+            try
+            {
+                var asm = typeof(ConfigService).Assembly;
+                using (var stream = asm.GetManifestResourceStream("AssemblyCodePlugin.Resources.DefaultConfig.json"))
+                {
+                    if (stream != null)
+                    {
+                        var serializer = new DataContractJsonSerializer(typeof(PluginSettings));
+                        if (serializer.ReadObject(stream) is PluginSettings loaded && loaded.Rules?.Count > 0)
+                        {
+                            return loaded;
+                        }
+                    }
+                }
+            }
+            catch { }
+
             // Слова-исключения для НАДЗЕМНЫХ (содержат "Подзем")
             var excAbove = new List<string>
             {

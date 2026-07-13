@@ -737,19 +737,6 @@ namespace AssemblyCodePlugin.UI
             GridRules.SelectedIndex = idx + 1;
         }
 
-        private void BtnReset_Click(object sender, RoutedEventArgs e)
-        {
-            if (MessageBox.Show("Сбросить все правила к настройкам по умолчанию (как в Dynamo)?",
-                "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-            {
-                _settings = ConfigService.ResetToDefaults();
-                _rows.Clear();
-                foreach (var r in _settings.Rules) _rows.Add(new RuleRowViewModel(r));
-                LoadSettingsToUi(_settings);
-                SetStatus("Настройки сброшены к умолчаниям Dynamo");
-            }
-        }
-
         // ─── Сохранение и запуск ──────────────────────────────────────────────────
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)

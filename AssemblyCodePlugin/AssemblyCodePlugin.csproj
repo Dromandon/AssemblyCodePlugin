@@ -23,6 +23,7 @@
     <None Update="AssemblyCodePlugin.addin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <EmbeddedResource Include="Resources\DefaultConfig.json" />
   </ItemGroup>
 
   <Target Name="PostBuildCopyToAddins" AfterTargets="PostBuildEvent">

@@ -557,12 +557,6 @@
                         </Button>
                     </StackPanel>
 
-                    <!-- Правая группа: Сброс по умолчанию -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <Button Style="{StaticResource IconButton}" Margin="0" ToolTip="Сбросить все правила к настройкам по умолчанию" Click="BtnReset_Click">
-                            <TextBlock Text="🔄" FontFamily="Segoe UI Emoji" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                        </Button>
-                    </StackPanel>
                 </Grid>
             </Border>
         </Grid>
