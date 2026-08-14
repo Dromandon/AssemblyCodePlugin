@@ -375,38 +375,40 @@
                                         <ControlTemplate TargetType="{x:Type GroupItem}">
                                             <StackPanel Margin="0,0,0,12">
                                                 <!-- Кнопка-заголовок -->
-                                                <ToggleButton x:Name="GroupHeaderBtn" IsChecked="True" Cursor="Hand" BorderThickness="1" Background="#F8FAFC" BorderBrush="#CBD5E1">
+                                                <ToggleButton x:Name="GroupHeaderBtn" IsChecked="True" Cursor="Hand" BorderThickness="1" Background="#F0F9FF" BorderBrush="#BAE6FD">
                                                     <ToggleButton.Template>
                                                         <ControlTemplate TargetType="ToggleButton">
-                                                            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="14,10">
+                                                            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6,6,0,0" Padding="14,10">
                                                                 <Grid>
                                                                     <Grid.ColumnDefinitions>
                                                                         <ColumnDefinition Width="Auto"/>
-                                                                        <ColumnDefinition Width="*"/>
                                                                         <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="*"/>
                                                                     </Grid.ColumnDefinitions>
                                                                     
+                                                                    <!-- Индикатор сворачивания (Стрелка слева) -->
+                                                                    <TextBlock x:Name="Arrow" Grid.Column="0" Text="▼" Foreground="#0284C7" FontSize="12" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,10,0"/>
+                                                                    
                                                                     <!-- Иконка папки -->
-                                                                    <TextBlock Grid.Column="0" Text="📁" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                                                    <TextBlock Grid.Column="1" Text="📁" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                                                     
                                                                     <!-- Текст -->
-                                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#0F172A" FontSize="14"/>
                                                                         <TextBlock Text="{Binding ItemCount, StringFormat=' — {0} правил'}" Foreground="#64748B" FontSize="13" VerticalAlignment="Center"/>
                                                                     </StackPanel>
-                                                                    
-                                                                    <!-- Индикатор сворачивания (Стрелка) -->
-                                                                    <TextBlock x:Name="Arrow" Grid.Column="2" Text="▼" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,4,0"/>
                                                                 </Grid>
                                                             </Border>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="Bd" Property="Background" Value="#F1F5F9"/>
+                                                                    <Setter TargetName="Bd" Property="Background" Value="#E0F2FE"/>
                                                                 </Trigger>
                                                                 <Trigger Property="IsChecked" Value="False">
                                                                     <Setter TargetName="Arrow" Property="Text" Value="▶"/>
-                                                                    <Setter TargetName="Bd" Property="Background" Value="#E2E8F0"/>
-                                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#94A3B8"/>
+                                                                    <Setter TargetName="Arrow" Property="Foreground" Value="#64748B"/>
+                                                                    <Setter TargetName="Bd" Property="CornerRadius" Value="6"/>
+                                                                    <Setter TargetName="Bd" Property="Background" Value="#F8FAFC"/>
+                                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#CBD5E1"/>
                                                                 </Trigger>
                                                             </ControlTemplate.Triggers>
                                                         </ControlTemplate>
@@ -414,7 +416,7 @@
                                                 </ToggleButton>
                                                 
                                                 <!-- Содержимое группы -->
-                                                <Border x:Name="GroupContent" BorderBrush="#E2E8F0" BorderThickness="1,0,1,1" CornerRadius="0,0,6,6" Margin="6,-6,6,0" Padding="0,8,0,0">
+                                                <Border x:Name="GroupContent" Background="#F8FAFC" BorderBrush="#BAE6FD" BorderThickness="1,0,1,1" CornerRadius="0,0,6,6" Padding="4,4,4,4">
                                                     <ItemsPresenter />
                                                 </Border>
                                                 
