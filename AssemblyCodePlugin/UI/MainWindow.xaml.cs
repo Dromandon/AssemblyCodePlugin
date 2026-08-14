@@ -65,6 +65,12 @@ namespace AssemblyCodePlugin.UI
             set { if (Rule.IsEnabled != value) { Rule.IsEnabled = value; OnPropertyChanged(); } }
         }
 
+        public string FolderName
+        {
+            get => Rule.FolderName;
+            set { if (Rule.FolderName != value) { Rule.FolderName = value; OnPropertyChanged(); } }
+        }
+
         public string ElementTypeName => Rule.ElementTypeName;
         public string FilterSummary => Rule.FilterSummary;
         public string SearchSummary => Rule.SearchSummary;
@@ -264,6 +270,7 @@ namespace AssemblyCodePlugin.UI
         private readonly UIApplication _uiApp;
         private PluginSettings _settings;
         private readonly ObservableCollection<RuleRowViewModel> _rows;
+        private System.Windows.Data.CollectionViewSource _cvsRules;
         private bool _runRequested = false;
         private List<ParamInfo> _availableParams = new List<ParamInfo>();
 
@@ -290,7 +297,11 @@ namespace AssemblyCodePlugin.UI
 
             _rows = new ObservableCollection<RuleRowViewModel>(
                 settings.Rules.Select(r => new RuleRowViewModel(r)));
-            GridRules.ItemsSource = _rows;
+                
+            _cvsRules = new System.Windows.Data.CollectionViewSource();
+            _cvsRules.Source = _rows;
+            _cvsRules.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription("FolderName"));
+            GridRules.ItemsSource = _cvsRules.View;
 
             // Автосохранение при закрытии окна отключено - сохранение только по кнопке "Сохранить настройки" или "ЗАПУСТИТЬ"
 
@@ -798,6 +809,58 @@ namespace AssemblyCodePlugin.UI
             _rows.RemoveAt(idx);
             _rows.Insert(idx + 1, item);
             GridRules.SelectedIndex = idx + 1;
+        }
+
+        // ─── Контекстное меню папок ───────────────────────────────────────────────
+
+        private void GridRules_ContextMenuOpened(object sender, RoutedEventArgs e)
+        {
+            if (MenuMoveToFolder == null) return;
+            MenuMoveToFolder.Items.Clear();
+
+            var folders = _rows.Select(r => r.FolderName).Where(f => !string.IsNullOrWhiteSpace(f)).Distinct().OrderBy(f => f).ToList();
+            if (folders.Count == 0)
+            {
+                var emptyItem = new MenuItem { Header = "(нет доступных папок)", IsEnabled = false };
+                MenuMoveToFolder.Items.Add(emptyItem);
+            }
+            else
+            {
+                foreach (var folder in folders)
+                {
+                    var item = new MenuItem { Header = folder };
+                    string folderName = folder; // замыкание
+                    item.Click += (s, ev) => MoveSelectedToFolder(folderName);
+                    MenuMoveToFolder.Items.Add(item);
+                }
+            }
+        }
+
+        private void MenuCreateFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new TextInputDialog("Новая папка") { Owner = this };
+            if (dlg.ShowDialog() == true)
+            {
+                MoveSelectedToFolder(dlg.InputText);
+            }
+        }
+
+        private void MenuRemoveFromFolder_Click(object sender, RoutedEventArgs e)
+        {
+            MoveSelectedToFolder("");
+        }
+
+        private void MoveSelectedToFolder(string folderName)
+        {
+            if (GridRules.SelectedItems == null || GridRules.SelectedItems.Count == 0) return;
+            var selectedRows = GridRules.SelectedItems.Cast<RuleRowViewModel>().ToList();
+            
+            foreach (var row in selectedRows)
+            {
+                row.FolderName = folderName;
+            }
+            
+            _cvsRules.View.Refresh();
         }
 
         // ─── Сохранение и запуск ──────────────────────────────────────────────────

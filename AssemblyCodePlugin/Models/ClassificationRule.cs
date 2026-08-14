@@ -219,6 +219,7 @@ namespace AssemblyCodePlugin.Models
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string ElementTypeName { get; set; } = "";
+        public string FolderName { get; set; } = string.Empty;
         public bool IsEnabled { get; set; } = true;
 
         // Если true — тип НЕ получает суффикс _BGL (для свай и фундаментных плит)
