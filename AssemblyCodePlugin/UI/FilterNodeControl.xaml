@@ -1,0 +1,154 @@
+<UserControl x:Class="AssemblyCodePlugin.UI.FilterNodeControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="100" d:DesignWidth="600">
+    <UserControl.Resources>
+        <Style x:Key="GhostButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#64748B"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F1F5F9"/>
+                                <Setter Property="Foreground" Value="#0F172A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <Style x:Key="DeleteButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FEE2E2"/>
+                                <Setter Property="Foreground" Value="#EF4444"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    
+    <Grid Background="Transparent">
+        <!-- Зона вставки СВЕРХУ -->
+        <Border x:Name="DropTargetTop" Height="8" Background="Transparent" VerticalAlignment="Top" Panel.ZIndex="10"
+                AllowDrop="True" DragEnter="DropTarget_DragEnter" DragLeave="DropTarget_DragLeave" Drop="DropTarget_Drop"/>
+        
+        <Grid Margin="0,4,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Drag Handle -->
+            <TextBlock Grid.Column="0" Text="⋮⋮" Foreground="#CBD5E1" FontWeight="Bold" FontSize="16" 
+                       VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,8,0,0"
+                       Cursor="SizeAll" MouseLeftButtonDown="DragHandle_MouseLeftButtonDown" MouseMove="DragHandle_MouseMove"
+                       ToolTip="Потяните для перемещения" Background="Transparent" Padding="4"/>
+
+            <Grid Grid.Column="1">
+                <!-- Представление для логической группы -->
+                <Border x:Name="GroupBorder" Visibility="Collapsed" 
+                        BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Background="#F8FAFC" Margin="0,0,0,8" Padding="10"
+                        AllowDrop="True" DragEnter="Group_DragEnter" DragLeave="Group_DragLeave" Drop="Group_Drop">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Логический оператор группы -->
+                            <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="Логика:" Foreground="#475569" FontWeight="Medium" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="13"/>
+                                <ComboBox x:Name="LogicComboBox" Width="70" SelectionChanged="LogicComboBox_SelectionChanged">
+                                    <ComboBoxItem Content="И"/>
+                                    <ComboBoxItem Content="ИЛИ"/>
+                                </ComboBox>
+                            </StackPanel>
+                            
+                            <StackPanel Orientation="Horizontal" Grid.Column="2" VerticalAlignment="Center">
+                                <Button Content="+ Условие" Style="{StaticResource GhostButton}" Click="BtnAddCondition_Click" Margin="0,0,4,0"/>
+                                <Button Content="+ Подгруппа" Style="{StaticResource GhostButton}" Click="BtnAddGroup_Click" Margin="0,0,8,0"/>
+                                <Button x:Name="BtnDeleteGroup" Width="26" Height="26" Style="{StaticResource DeleteButton}" Click="BtnDelete_Click" ToolTip="Удалить подгруппу">
+                                    <TextBlock Text="✕" FontWeight="Bold" FontSize="11"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                        
+                        <Border x:Name="GroupDropHighlight" BorderBrush="Transparent" BorderThickness="2" CornerRadius="4">
+                            <StackPanel x:Name="ChildrenContainer" Margin="0,0,0,0" MinHeight="10" Background="Transparent"/>
+                        </Border>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Представление для конкретного условия (листа) -->
+                <Border x:Name="RuleBorder" Visibility="Collapsed" 
+                        BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Background="Transparent" Margin="0,0,0,4" Padding="0,0,0,6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Параметр -->
+                        <ComboBox x:Name="ParamComboBox" Grid.Column="0" Margin="0,0,8,0" Height="28" SelectionChanged="ParamComboBox_SelectionChanged" LostFocus="ParamComboBox_LostFocus" IsEditable="True"/>
+                        
+                        <!-- Компаратор -->
+                        <ComboBox x:Name="ComparatorComboBox" Grid.Column="1" Margin="0,0,8,0" Height="28" SelectionChanged="ComparatorComboBox_SelectionChanged">
+                            <ComboBoxItem Content="Содержит"/>
+                            <ComboBoxItem Content="Не содержит"/>
+                            <ComboBoxItem Content="Равно"/>
+                            <ComboBoxItem Content="Не равно"/>
+                            <ComboBoxItem Content="Начинается с"/>
+                            <ComboBoxItem Content="Заканчивается на"/>
+                            <ComboBoxItem Content="Больше"/>
+                            <ComboBoxItem Content="Меньше"/>
+                            <ComboBoxItem Content="Больше или равно"/>
+                            <ComboBoxItem Content="Меньше или равно"/>
+                        </ComboBox>
+                        
+                        <!-- Значение -->
+                        <TextBox x:Name="ValueTextBox" Grid.Column="2" Margin="0,0,8,0" Height="28" VerticalContentAlignment="Center" TextChanged="ValueTextBox_TextChanged"/>
+                        
+                        <!-- Удалить -->
+                        <Button Grid.Column="3" Width="28" Height="28" Style="{StaticResource DeleteButton}" Click="BtnDelete_Click" ToolTip="Удалить условие">
+                            <TextBlock Text="✕" FontWeight="Bold" FontSize="11"/>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Зона вставки СНИЗУ -->
+        <Border x:Name="DropTargetBottom" Height="8" Background="Transparent" VerticalAlignment="Bottom" Panel.ZIndex="10"
+                AllowDrop="True" DragEnter="DropTarget_DragEnter" DragLeave="DropTarget_DragLeave" Drop="DropTarget_Drop"/>
+    </Grid>
+</UserControl>

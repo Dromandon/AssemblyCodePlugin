@@ -6,6 +6,7 @@ namespace AssemblyCodePlugin.Models
     {
         // Имена параметров Revit (UNIFORMAT_CODE и FAM_Underground)
         public string AssemblyCodeParamName { get; set; } = "Код по классификатору";
+        public string AssemblyDescriptionParamName { get; set; } = "";
         public string UndergroundParamName { get; set; } = "FAM_Underground";
         public string UndergroundValueText { get; set; } = "Подземная часть";
         public string AbovegroundValueText { get; set; } = "Надземная часть";
@@ -13,6 +14,9 @@ namespace AssemblyCodePlugin.Models
 
         // Общая настройка: не добавлять суффикс _BGL для подземной части
         public bool NeverAddBglSuffix { get; set; } = false;
+        
+        // Отключить разделение на надземную и подземную части
+        public bool DisableZoneSplit { get; set; } = false;
 
         // Настройки нулевого уровня
         public ZeroLevelSettings ZeroLevel { get; set; } = new ZeroLevelSettings();

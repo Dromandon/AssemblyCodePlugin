@@ -30,15 +30,14 @@ namespace AssemblyCodePlugin.UI
             if (_isCommitting)
             {
                 double elapsedSec = elapsed.TotalSeconds;
-                double remainingSec = Math.Max(1, _estimatedTotalSeconds - elapsedSec);
 
-                int remMin = (int)(remainingSec / 60);
-                int remSec = (int)(remainingSec % 60);
+                int estMin = (int)(_estimatedTotalSeconds / 60);
+                int estSec = (int)(_estimatedTotalSeconds % 60);
 
-                if (remMin > 0)
-                    TxtEstimate.Text = $"Примерное время фиксации Revit: ~{remMin} мин {remSec:D2} сек";
+                if (estMin > 0)
+                    TxtEstimate.Text = $"Ориентировочное время фиксации: ~{estMin} мин {estSec:D2} сек";
                 else
-                    TxtEstimate.Text = $"Примерное время фиксации Revit: ~{remSec} сек";
+                    TxtEstimate.Text = $"Ориентировочное время фиксации: ~{estSec} сек";
 
                 // Плавная анимация прогресса от 50% до 98% во время Commit
                 double prog = 50.0 + Math.Min(48.0, (elapsedSec / Math.Max(10, _estimatedTotalSeconds)) * 48.0);

@@ -15,13 +15,15 @@ namespace AssemblyCodePlugin.UI
         public string ResultUndergroundValue { get; private set; }
         public string ResultAbovegroundValue { get; private set; }
         public bool ResultIsYesNo { get; private set; }
+        public bool ResultNeverAddBglSuffix { get; private set; }
 
         public UndergroundIdentificationDialog(
             List<ParamInfo> allParams,
             string currentParamName,
             string currentUndergroundValue,
             string currentAbovegroundValue,
-            bool currentIsYesNo)
+            bool currentIsYesNo,
+            bool currentNeverAddBglSuffix)
         {
             InitializeComponent();
 
@@ -55,6 +57,9 @@ namespace AssemblyCodePlugin.UI
             bool underIsTrue = IsYesValue(currentUndergroundValue);
             CmbUndergroundYesNo.SelectedIndex = underIsTrue ? 0 : 1;
             CmbAbovegroundYesNo.SelectedIndex = underIsTrue ? 1 : 0;
+
+            if (ChkNeverAddBglSuffix != null)
+                ChkNeverAddBglSuffix.IsChecked = currentNeverAddBglSuffix;
 
             UpdateInputMode(ResultIsYesNo);
         }
@@ -144,6 +149,9 @@ namespace AssemblyCodePlugin.UI
                 ResultUndergroundValue = TxtUndergroundValue.Text?.Trim() ?? "";
                 ResultAbovegroundValue = TxtAbovegroundValue.Text?.Trim() ?? "";
             }
+
+            if (ChkNeverAddBglSuffix != null)
+                ResultNeverAddBglSuffix = ChkNeverAddBglSuffix.IsChecked == true;
 
             DialogResult = true;
             Close();

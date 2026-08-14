@@ -273,113 +273,81 @@
             </DockPanel>
         </Border>
 
-        <!-- Верхний блок настроек (две аккуратные карточки) -->
-        <Grid Grid.Row="1" Margin="0,0,0,14">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="5*"/>
-                <ColumnDefinition Width="14"/>
-                <ColumnDefinition Width="7*"/>
-            </Grid.ColumnDefinitions>
+        <!-- Верхний блок настроек (Компактная панель) -->
+        <Border Grid.Row="1" Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16,14" Margin="0,0,0,10">
+            <StackPanel Orientation="Vertical">
+                
+                <!-- 1. Тумблер полного отключения зон -->
+                <StackPanel Margin="0,0,0,16">
+                    <CheckBox x:Name="ChkDisableZoneSplit" Style="{StaticResource ToggleSwitchStyle}" VerticalAlignment="Center" Click="ChkDisableZoneSplit_Click">
+                        <TextBlock Text="Не делить элементы на выше и ниже нуля" FontWeight="Bold" Foreground="#E23E2E"/>
+                    </CheckBox>
+                </StackPanel>
 
-            <!-- КАРТОЧКА 1: Отметка нулевого уровня здания -->
-            <Border Grid.Column="0" Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16,14">
-                <Grid>
+                <!-- Основные настройки: параметры и отметки нуля -->
+                <Grid Margin="0,0,0,4">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="12"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="10"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Заголовок карточки -->
-                    <DockPanel Grid.Row="0" LastChildFill="True">
-                        <Border Width="24" Height="24" CornerRadius="6" Background="#EFF6FF" Margin="0,0,8,0">
-                            <TextBlock Text="🏢" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="Отметка нуля здания (диапазон плит)" FontWeight="Bold" FontSize="13" Foreground="#0F172A" VerticalAlignment="Center"/>
-                    </DockPanel>
-
-                    <!-- Нижний ноль -->
-                    <Grid Grid.Row="2">
+                    <!-- Строка 0: Параметр кода и Кнопка идентификатора -->
+                    <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="90"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="75"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="65"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="65"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Нижний ноль:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155"/>
-                        <ComboBox Grid.Column="1" x:Name="CmbLowLevel" Height="28" Margin="0,0,8,0"/>
-                        <TextBox Grid.Column="2" x:Name="TxtLowOffset" Height="28" ToolTip="Смещение от уровня (мм)" Padding="6,4"/>
-                    </Grid>
 
-                    <!-- Верхний ноль -->
-                    <Grid Grid.Row="4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="90"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="75"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Верхний ноль:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155"/>
-                        <ComboBox Grid.Column="1" x:Name="CmbHighLevel" Height="28" Margin="0,0,8,0"/>
-                        <TextBox Grid.Column="2" x:Name="TxtHighOffset" Height="28" ToolTip="Смещение от уровня (мм)" Padding="6,4"/>
-                    </Grid>
-                </Grid>
-            </Border>
+                        <TextBlock Grid.Column="0" Text="Параметр кода:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155" Margin="0,0,8,0"/>
+                        <ComboBox Grid.Column="1" Grid.ColumnSpan="2" x:Name="CmbAssemblyCodeParam" IsEditable="True" Height="26" 
+                                  SelectionChanged="CmbAssemblyCodeParam_SelectionChanged"
+                                  TextBoxBase.TextChanged="CmbAssemblyCodeParam_TextChanged" Margin="0,0,6,0"/>
 
-            <!-- КАРТОЧКА 2: Целевые параметры и режим записи -->
-            <Border Grid.Column="2" Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="16,14">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="12"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="14"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Заголовок карточки -->
-                    <DockPanel Grid.Row="0" LastChildFill="True">
-                        <Border Width="24" Height="24" CornerRadius="6" Background="#F0FDF4" Margin="0,0,8,0">
-                            <TextBlock Text="⚙️" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="Целевые параметры и режим записи" FontWeight="Bold" FontSize="13" Foreground="#0F172A" VerticalAlignment="Center"/>
-                    </DockPanel>
-
-                    <!-- Параметры: Код классификатора и кнопка настройки идентификатора -->
-                    <Grid Grid.Row="2">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Параметр кода:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155" Margin="0,0,10,0"/>
-                        <ComboBox Grid.Column="1" x:Name="CmbAssemblyCodeParam" IsEditable="True" Height="28" Margin="0,0,10,0"/>
-                        <Button Grid.Column="2" x:Name="BtnConfigureUndergroundId"
-                                Content="⚙️ Идентификатор зоны (надземная / подземная)..."
-                                Style="{StaticResource ToolButton}" Height="28" Padding="12,0"
+                        <Button Grid.Column="4" Grid.ColumnSpan="3" x:Name="BtnConfigureUndergroundId"
+                                HorizontalAlignment="Stretch"
+                                Content="⚙️ Идентификатор зоны..."
+                                Style="{StaticResource ToolButton}" Height="26"
                                 Click="BtnConfigureUndergroundId_Click"
                                 ToolTip="Настроить параметр и значения для надземной и подземной части"/>
                     </Grid>
 
-                    <!-- Переключатель суффикса BGL с развёрнутой подсказкой -->
-                    <StackPanel Grid.Row="4" Orientation="Vertical">
-                        <CheckBox x:Name="ChkNeverAddBglSuffix" Style="{StaticResource ToggleSwitchStyle}" VerticalAlignment="Center">
-                            <TextBlock Text="Не добавлять суффикс _BGL для подземной части" FontWeight="SemiBold" Foreground="#1E293B"/>
-                        </CheckBox>
-                        <TextBlock FontSize="11"
-                                   Foreground="#64748B"
-                                   TextWrapping="Wrap"
-                                   Margin="48,4,0,0">
-                            <Run Text="Для случаев, когда:" FontWeight="Medium"/>
-                            <LineBreak/>
-                            <Run Text="1. Код по классификатору и индентификатор надземной/подземной части здания записываются в параметры экземпляра."/>
-                            <LineBreak/>
-                            <Run Text="2. Код по классификатору индентичен для надземной и подземной части здания, а индентификатор надземной/подземной части здания записывается в параметры экземпляра."/>
-                        </TextBlock>
+                    <!-- Строка 1: Параметр описания (скрытый) -->
+                    <StackPanel Grid.Row="1" x:Name="PanelAssemblyDescParam" Orientation="Horizontal" Visibility="Collapsed" Margin="0,12,0,0">
+                        <TextBlock Text="Параметр описания:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155" Width="120"/>
+                        <ComboBox x:Name="CmbAssemblyDescParam" IsEditable="True" Height="26" Width="189"/>
+                    </StackPanel>
+
+                    <!-- Строка 2: Блок отметок нуля -->
+                    <StackPanel Grid.Row="2" x:Name="ZeroLevelSettingsPanel" Margin="0,12,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="65"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="65"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Нижний ноль:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155" Margin="0,0,8,0"/>
+                            <ComboBox Grid.Column="1" x:Name="CmbLowLevel" Height="26" Margin="0,0,6,0"/>
+                            <TextBox Grid.Column="2" x:Name="TxtLowOffset" Height="26" ToolTip="Смещение (мм)" Padding="4,2"/>
+
+                            <TextBlock Grid.Column="4" Text="Верхний ноль:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155" Margin="0,0,8,0"/>
+                            <ComboBox Grid.Column="5" x:Name="CmbHighLevel" Height="26" Margin="0,0,6,0"/>
+                            <TextBox Grid.Column="6" x:Name="TxtHighOffset" Height="26" ToolTip="Смещение (мм)" Padding="4,2"/>
+                        </Grid>
                     </StackPanel>
                 </Grid>
-            </Border>
-        </Grid>
+
+            </StackPanel>
+        </Border>
 
         <!-- Центральная область: Таблица правил и аккуратная нижняя панель инструментов -->
         <Grid Grid.Row="2">

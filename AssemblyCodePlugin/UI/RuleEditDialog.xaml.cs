@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using AssemblyCodePlugin.Models;
 using AssemblyCodePlugin.Services;
@@ -18,35 +19,11 @@ namespace AssemblyCodePlugin.UI
         public int Points { get; set; }
     }
 
-    public class FilterConditionViewModel : INotifyPropertyChanged
+    public class CategoryItem
     {
-        private string _paramName = "Имя типа";
-        private string _comparator = "Содержит";
-        private string _valueString = "";
-
-        public string ParamName
-        {
-            get => _paramName;
-            set { _paramName = value; OnPropertyChanged(nameof(ParamName)); }
-        }
-
-        public string Comparator
-        {
-            get => _comparator;
-            set { _comparator = value; OnPropertyChanged(nameof(Comparator)); }
-        }
-
-        public string ValueString
-        {
-            get => _valueString;
-            set { _valueString = value; OnPropertyChanged(nameof(ValueString)); }
-        }
-
-        public ObservableCollection<string> AvailableParameters { get; } = new ObservableCollection<string>();
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged(string name) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        public string Display { get; set; }
+        public string BIC { get; set; }
+        public string DisplayName { get; set; }
     }
 
     public partial class RuleEditDialog : Window, INotifyPropertyChanged
@@ -59,7 +36,7 @@ namespace AssemblyCodePlugin.UI
         private readonly Document _doc;
         public ClassificationRule Result { get; private set; }
 
-        public ObservableCollection<FilterConditionViewModel> FilterConditions { get; } = new ObservableCollection<FilterConditionViewModel>();
+        private FilterNode _rootFilterNode;
 
         // Коллекции тегов для Вкладки 1 (Фильтры Revit - устаревшие для совместимости)
         public ObservableCollection<string> FamilyContainsTags { get; } = new ObservableCollection<string>();
@@ -123,24 +100,81 @@ namespace AssemblyCodePlugin.UI
             (_selectedBelowPreviewMatch != null && _previewPathToCodeMap.TryGetValue(_selectedBelowPreviewMatch, out var p) && !string.IsNullOrEmpty(p))
             ? $"📁 {p}" : "";
 
-        private static readonly (string Display, string BIC, string DisplayName)[] Categories =
-        {
-            ("OST_Walls — Стены", "OST_Walls", "Стены"),
-            ("OST_Floors — Перекрытия", "OST_Floors", "Перекрытия"),
-            ("OST_StructuralFraming — Каркас несущих конструкций", "OST_StructuralFraming", "Каркас несущих конструкций"),
-            ("OST_StructuralColumns — Несущие колонны", "OST_StructuralColumns", "Несущие колонны"),
-            ("OST_GenericModel — Обобщённые модели", "OST_GenericModel", "Обобщённые модели"),
-            ("OST_StructuralFoundation — Фундаменты", "OST_StructuralFoundation", "Фундаменты"),
-            ("OST_EdgeSlab — Монолитный пояс (EdgeSlab)", "OST_EdgeSlab", "Монолитный пояс"),
-        };
+        public CategoryItem[] Categories { get; private set; }
+        private ICollectionView _categoryView;
 
-        public RuleEditDialog(ClassificationRule rule, Document doc = null)
+        private void AddCatAndSubcats(Category cat, Dictionary<int, CategoryItem> list)
+        {
+            if (cat == null) return;
+            int id = cat.Id.IntegerValue;
+            
+            if (Enum.IsDefined(typeof(BuiltInCategory), id))
+            {
+                if (!list.ContainsKey(id))
+                {
+                    string bicName = Enum.GetName(typeof(BuiltInCategory), (BuiltInCategory)id);
+                    if (bicName != null && !bicName.StartsWith("INVALID"))
+                    {
+                        list[id] = new CategoryItem { Display = $"{bicName} — {cat.Name}", BIC = bicName, DisplayName = cat.Name };
+                    }
+                }
+            }
+            
+            try
+            {
+                foreach (Category sub in cat.SubCategories)
+                {
+                    AddCatAndSubcats(sub, list);
+                }
+            }
+            catch { }
+        }
+
+        private void InitializeCategories()
+        {
+            if (_doc != null)
+            {
+                var list = new Dictionary<int, CategoryItem>();
+                foreach (Category cat in _doc.Settings.Categories)
+                {
+                    AddCatAndSubcats(cat, list);
+                }
+                
+                foreach (BuiltInCategory bic in Enum.GetValues(typeof(BuiltInCategory)))
+                {
+                    int id = (int)bic;
+                    if (!list.ContainsKey(id))
+                    {
+                        try
+                        {
+                            Category cat = Category.GetCategory(_doc, bic);
+                            if (cat != null) AddCatAndSubcats(cat, list);
+                        }
+                        catch { }
+                    }
+                }
+
+                Categories = list.Values.OrderBy(c => c.DisplayName).ToArray();
+            }
+            else
+            {
+                Categories = new[] { new CategoryItem { Display = "OST_Walls — Стены", BIC = "OST_Walls", DisplayName = "Стены" } };
+            }
+        }
+
+        public RuleEditDialog(ClassificationRule rule, Document doc = null, bool disableZoneSplit = false)
         {
             InitializeComponent();
             _source = rule;
             _doc = doc;
+            InitializeCategories();
             DataContext = this;
             LoadFromRule(rule);
+            
+            if (disableZoneSplit && TabBelowGround != null)
+            {
+                TabBelowGround.Visibility = System.Windows.Visibility.Collapsed;
+            }
         }
 
         private void LoadFromRule(ClassificationRule r)
@@ -150,32 +184,34 @@ namespace AssemblyCodePlugin.UI
             ChkSkipUnderground.IsChecked = r.SkipUnderground;
 
             var f = r.RevitFilter ?? new RevitElementFilterRule();
-            CmbCategory.SelectedIndex = Array.FindIndex(Categories, c => c.BIC == f.TargetCategory);
-            if (CmbCategory.SelectedIndex < 0) CmbCategory.SelectedIndex = 0;
+            
+            _categoryView = CollectionViewSource.GetDefaultView(Categories);
+            _categoryView.Filter = CategoryFilter;
+            CmbCategory.ItemsSource = _categoryView;
+            
+            var selCat = Categories.FirstOrDefault(c => c.BIC == f.TargetCategory);
+            if (selCat != null) CmbCategory.SelectedItem = selCat;
+            else CmbCategory.SelectedIndex = 0;
 
-            if (f.LogicalOperator == "OR" || f.LogicalOperator == "ИЛИ")
-                CmbLogicalOperator.SelectedIndex = 1;
-            else
-                CmbLogicalOperator.SelectedIndex = 0;
+            if (ChkAppendTypeSuffix != null) ChkAppendTypeSuffix.IsChecked = f.AppendTypeSuffix;
+            if (TxtTypeSuffix != null) TxtTypeSuffix.Text = f.TypeSuffix;
+            UpdateTypeSuffixPanelVisibility();
 
             RefreshAvailableParametersForSelectedCategory();
 
-            FilterConditions.Clear();
-            var effConds = f.GetEffectiveConditions();
-            if (effConds != null)
+            // Создаем корневой узел из правила (если он пуст, метод сам создаст пустую группу)
+            _rootFilterNode = f.GetEffectiveRootNode();
+            
+            // Если он не группа, оборачиваем в группу, чтобы в корне всегда была Группа
+            if (!_rootFilterNode.IsGroup)
             {
-                foreach (var cond in effConds)
-                {
-                    var vm = new FilterConditionViewModel
-                    {
-                        ParamName = cond.ParamName ?? "Имя типа",
-                        Comparator = cond.Comparator ?? "Содержит",
-                        ValueString = cond.ValueString ?? ""
-                    };
-                    PopulateVmParams(vm);
-                    FilterConditions.Add(vm);
-                }
+                var newRoot = new FilterNode { IsGroup = true, LogicalOperator = "AND" };
+                newRoot.Children.Add(_rootFilterNode);
+                _rootFilterNode = newRoot;
             }
+
+            var rootControl = new FilterNodeControl(_rootFilterNode, CurrentCategoryParams, isRoot: true);
+            RootFilterContainer.Content = rootControl;
 
             var ab = r.AboveGroundSearchRule ?? new ClassifierSearchRule();
             LoadTags(AboveAnyTrueTags, ab.AnyTrue);
@@ -190,17 +226,43 @@ namespace AssemblyCodePlugin.UI
             LoadBonuses(BelowBonusRows, bel.ExtraTrue);
         }
 
-        private List<string> _currentCategoryParams = new List<string> { "Имя типа", "Имя семейства" };
+        public System.Collections.ObjectModel.ObservableCollection<string> CurrentCategoryParams { get; } = new System.Collections.ObjectModel.ObservableCollection<string>();
+
+        private bool CategoryFilter(object item)
+        {
+            if (string.IsNullOrWhiteSpace(CmbCategory.Text)) return true;
+            var cat = (CategoryItem)item;
+            return cat.Display.IndexOf(CmbCategory.Text, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private void CmbCategory_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var tb = e.OriginalSource as TextBox;
+            if (tb != null && CmbCategory.IsKeyboardFocusWithin)
+            {
+                _categoryView.Refresh();
+                CmbCategory.IsDropDownOpen = true;
+            }
+        }
 
         private void CmbCategory_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            RefreshAvailableParametersForSelectedCategory();
+            if (CmbCategory.SelectedItem != null)
+                RefreshAvailableParametersForSelectedCategory();
         }
 
         private void RefreshAvailableParametersForSelectedCategory()
         {
-            int catIdx = CmbCategory.SelectedIndex;
-            string bicStr = catIdx >= 0 && catIdx < Categories.Length ? Categories[catIdx].BIC : "OST_Walls";
+            string bicStr = "OST_Walls";
+            if (CmbCategory.SelectedItem is CategoryItem selCat)
+            {
+                bicStr = selCat.BIC;
+            }
+            else
+            {
+                var match = Categories.FirstOrDefault(c => c.Display.Equals(CmbCategory.Text, StringComparison.OrdinalIgnoreCase));
+                if (match != null) bicStr = match.BIC;
+            }
 
             var list = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Имя типа", "Имя семейства" };
 
@@ -239,39 +301,12 @@ namespace AssemblyCodePlugin.UI
                 catch { }
             }
 
-            _currentCategoryParams = new List<string> { "Имя типа", "Имя семейства" };
-            _currentCategoryParams.AddRange(list.Where(x => !string.Equals(x, "Имя типа", StringComparison.OrdinalIgnoreCase) && !string.Equals(x, "Имя семейства", StringComparison.OrdinalIgnoreCase)).OrderBy(x => x));
-
-            foreach (var vm in FilterConditions)
+            CurrentCategoryParams.Clear();
+            CurrentCategoryParams.Add("Имя типа");
+            CurrentCategoryParams.Add("Имя семейства");
+            foreach (var p in list.Where(x => !string.Equals(x, "Имя типа", StringComparison.OrdinalIgnoreCase) && !string.Equals(x, "Имя семейства", StringComparison.OrdinalIgnoreCase)).OrderBy(x => x))
             {
-                PopulateVmParams(vm);
-            }
-        }
-
-        private void PopulateVmParams(FilterConditionViewModel vm)
-        {
-            vm.AvailableParameters.Clear();
-            foreach (var p in _currentCategoryParams)
-                vm.AvailableParameters.Add(p);
-        }
-
-        private void BtnAddCondition_Click(object sender, RoutedEventArgs e)
-        {
-            var vm = new FilterConditionViewModel
-            {
-                ParamName = "Имя типа",
-                Comparator = "Содержит",
-                ValueString = ""
-            };
-            PopulateVmParams(vm);
-            FilterConditions.Add(vm);
-        }
-
-        private void RemoveCondition_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button btn && btn.Tag is FilterConditionViewModel vm)
-            {
-                FilterConditions.Remove(vm);
+                CurrentCategoryParams.Add(p);
             }
         }
 
@@ -515,11 +550,38 @@ namespace AssemblyCodePlugin.UI
             }
         }
 
+        private void ChkAppendTypeSuffix_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateTypeSuffixPanelVisibility();
+        }
+
+        private void UpdateTypeSuffixPanelVisibility()
+        {
+            if (PanelTypeSuffix != null && ChkAppendTypeSuffix != null)
+            {
+                PanelTypeSuffix.Visibility = (ChkAppendTypeSuffix.IsChecked == true) ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            }
+        }
+
         private ClassificationRule BuildRule()
         {
-            int catIdx = CmbCategory.SelectedIndex;
-            string bic = catIdx >= 0 && catIdx < Categories.Length ? Categories[catIdx].BIC : "OST_Walls";
-            string dispName = catIdx >= 0 && catIdx < Categories.Length ? Categories[catIdx].DisplayName : "";
+            string bic = "OST_Walls";
+            string dispName = "";
+
+            if (CmbCategory.SelectedItem is CategoryItem selCat)
+            {
+                bic = selCat.BIC;
+                dispName = selCat.DisplayName;
+            }
+            else
+            {
+                var match = Categories.FirstOrDefault(c => c.Display.Equals(CmbCategory.Text, StringComparison.OrdinalIgnoreCase) || c.DisplayName.Equals(CmbCategory.Text, StringComparison.OrdinalIgnoreCase));
+                if (match != null)
+                {
+                    bic = match.BIC;
+                    dispName = match.DisplayName;
+                }
+            }
 
             return new ClassificationRule
             {
@@ -533,13 +595,11 @@ namespace AssemblyCodePlugin.UI
                 {
                     TargetCategory = bic,
                     CategoryDisplayName = dispName,
-                    LogicalOperator = CmbLogicalOperator.SelectedIndex == 1 ? "OR" : "AND",
-                    Conditions = FilterConditions.Select(vm => new FilterConditionRule
-                    {
-                        ParamName = vm.ParamName?.Trim() ?? "Имя типа",
-                        Comparator = vm.Comparator ?? "Содержит",
-                        ValueString = vm.ValueString?.Trim() ?? ""
-                    }).Where(c => !string.IsNullOrEmpty(c.ValueString)).ToList(),
+                    AppendTypeSuffix = ChkAppendTypeSuffix != null && ChkAppendTypeSuffix.IsChecked == true,
+                    TypeSuffix = TxtTypeSuffix?.Text?.Trim() ?? "",
+                    LogicalOperator = "AND", // Корневой логический оператор теперь хранится в самом RootNode
+                    RootNode = _rootFilterNode?.Clone(),
+                    Conditions = new List<FilterConditionRule>(),
                     FamilyNameContainsAny = FamilyContainsTags.ToList(),
                     FamilyNameNotContains = FamilyNotContainsTags.ToList(),
                     TypeNameContainsAny = TypeContainsTags.ToList(),

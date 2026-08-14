@@ -171,6 +171,37 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Сам тумблер (Пилюля 38x22) -->
+                            <Grid Width="38" Height="22" Margin="0,0,10,0">
+                                <Border x:Name="Track" CornerRadius="11" Background="#E2E8F0" BorderBrush="#CBD5E1" BorderThickness="1"/>
+                                <Ellipse x:Name="Thumb" Width="16" Height="16" Fill="White" HorizontalAlignment="Left" Margin="3,0,0,0">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect ShadowDepth="1" BlurRadius="3" Opacity="0.2"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                            </Grid>
+                            <!-- Подпись рядом -->
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="#0EA5E9"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="#0284C7"/>
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="Thumb" Property="Margin" Value="0,0,3,0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="18">
@@ -209,6 +240,8 @@
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="14"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="14"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <!-- Категория -->
@@ -218,99 +251,45 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Категория Revit:" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                                <ComboBox Grid.Column="1" x:Name="CmbCategory" Height="32" SelectionChanged="CmbCategory_SelectionChanged">
-                                    <ComboBoxItem Content="OST_Walls — Стены"/>
-                                    <ComboBoxItem Content="OST_Floors — Перекрытия"/>
-                                    <ComboBoxItem Content="OST_StructuralFraming — Каркас несущих конструкций"/>
-                                    <ComboBoxItem Content="OST_StructuralColumns — Несущие колонны"/>
-                                    <ComboBoxItem Content="OST_GenericModel — Обобщённые модели"/>
-                                    <ComboBoxItem Content="OST_StructuralFoundation — Фундаменты"/>
-                                    <ComboBoxItem Content="OST_EdgeSlab — Монолитный пояс (EdgeSlab)"/>
-                                </ComboBox>
+                                <ComboBox Grid.Column="1" x:Name="CmbCategory" Height="32" 
+                                          SelectionChanged="CmbCategory_SelectionChanged"
+                                          TextBoxBase.TextChanged="CmbCategory_TextChanged"
+                                          ItemsSource="{Binding Categories}"
+                                          DisplayMemberPath="Display"
+                                          SelectedValuePath="BIC"
+                                          IsEditable="True"
+                                          IsTextSearchEnabled="False" />
                             </Grid>
 
-                            <!-- Режим объединения условий (И/ИЛИ) -->
-                            <Grid Grid.Row="2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="190"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Правило объединения:" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                                <ComboBox Grid.Column="1" x:Name="CmbLogicalOperator" Height="32">
-                                    <ComboBoxItem Content="Все условия должны выполняться (И)" Tag="AND"/>
-                                    <ComboBoxItem Content="Хотя бы одно условие должно выполняться (ИЛИ)" Tag="OR"/>
-                                </ComboBox>
-                            </Grid>
-
-                            <!-- Список условий отбора элементов -->
-                            <Border Grid.Row="4" Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="12">
+                            <!-- Дерево условий отбора элементов -->
+                            <Border Grid.Row="2" Grid.RowSpan="5" Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="12">
                                 <DockPanel>
-                                    <TextBlock DockPanel.Dock="Top" Text="Условия отбора элементов (можно выбрать или ввести любой параметр семейства/типа):" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,10"/>
+                                    <TextBlock DockPanel.Dock="Top" Text="Условия отбора элементов (можно использовать вложенные группы И / ИЛИ):" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,10"/>
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                        <ItemsControl ItemsSource="{Binding FilterConditions}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid Margin="0,0,0,8">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="2*"/>
-                                                            <ColumnDefinition Width="160"/>
-                                                            <ColumnDefinition Width="2*"/>
-                                                            <ColumnDefinition Width="36"/>
-                                                        </Grid.ColumnDefinitions>
-
-                                                        <!-- Параметр (выпадающий список или ручной ввод) -->
-                                                        <ComboBox Grid.Column="0"
-                                                                  IsEditable="True"
-                                                                  Text="{Binding ParamName, UpdateSourceTrigger=PropertyChanged}"
-                                                                  ItemsSource="{Binding AvailableParameters}"
-                                                                  Height="32" Margin="0,0,8,0"
-                                                                  ToolTip="Выберите параметр из списка или введите имя параметра вручную"/>
-
-                                                        <!-- Условие сравнения -->
-                                                        <ComboBox Grid.Column="1"
-                                                                  SelectedValue="{Binding Comparator}"
-                                                                  SelectedValuePath="Content"
-                                                                  Height="32" Margin="0,0,8,0">
-                                                            <ComboBoxItem Content="Содержит"/>
-                                                            <ComboBoxItem Content="Не содержит"/>
-                                                            <ComboBoxItem Content="Равно"/>
-                                                            <ComboBoxItem Content="Не равно"/>
-                                                            <ComboBoxItem Content="Начинается с"/>
-                                                            <ComboBoxItem Content="Заканчивается на"/>
-                                                            <ComboBoxItem Content="Больше"/>
-                                                            <ComboBoxItem Content="Меньше"/>
-                                                            <ComboBoxItem Content="Больше или равно"/>
-                                                            <ComboBoxItem Content="Меньше или равно"/>
-                                                        </ComboBox>
-
-                                                        <!-- Значение для сравнения -->
-                                                        <TextBox Grid.Column="2"
-                                                                 Text="{Binding ValueString, UpdateSourceTrigger=PropertyChanged}"
-                                                                 Height="32" Margin="0,0,8,0"
-                                                                 VerticalContentAlignment="Center"
-                                                                 ToolTip="Значение, с которым сравнивается параметр"/>
-
-                                                        <!-- Кнопка удаления условия -->
-                                                        <Button Grid.Column="3"
-                                                                Style="{StaticResource IconButton}"
-                                                                Height="32" Width="32"
-                                                                Click="RemoveCondition_Click"
-                                                                Tag="{Binding}"
-                                                                ToolTip="Удалить это условие">
-                                                            <TextBlock Text="🗑️" FontSize="14"/>
-                                                        </Button>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                        <!-- Сюда в Code-Behind будет динамически добавлен корневой FilterNodeControl -->
+                                        <ContentControl x:Name="RootFilterContainer" />
                                     </ScrollViewer>
                                 </DockPanel>
                             </Border>
 
-                            <Button Grid.Row="6" Content="+ Добавить условие фильтрации"
-                                    HorizontalAlignment="Left" Height="34" Padding="14,0"
-                                    Style="{StaticResource PrimaryButton}"
-                                    Click="BtnAddCondition_Click"/>
+                            <!-- Настройка автоматического добавления суффикса к имени типа -->
+                            <Border Grid.Row="8" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
+                                <StackPanel Orientation="Vertical">
+                                    <CheckBox x:Name="ChkAppendTypeSuffix" Style="{StaticResource ToggleSwitchStyle}" VerticalAlignment="Center" Click="ChkAppendTypeSuffix_Click">
+                                        <TextBlock Text="Добавлять суффикс к имени типа при классификации (создание отдельного типа при необходимости)" FontWeight="SemiBold" Foreground="#1E293B"/>
+                                    </CheckBox>
+                                    <Grid x:Name="PanelTypeSuffix" Margin="48,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Суффикс типа:" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155" Margin="0,0,10,0"/>
+                                        <TextBox Grid.Column="1" x:Name="TxtTypeSuffix" Height="28" VerticalContentAlignment="Center" ToolTip="Например: _L01 или _Тип2 (если в имени типа его нет, плагин добавит и создаст дубликат типа)"/>
+                                        <TextBlock Grid.Column="2" Text="* Позволяет разделять элементы одной категории с разными параметрами экземпляра на разные типы" VerticalAlignment="Center" FontSize="11" Foreground="#64748B" Margin="12,0,0,0" TextWrapping="Wrap"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
                         </Grid>
                     </ScrollViewer>
                 </Border>
@@ -526,7 +505,7 @@
             </TabItem>
 
             <!-- ═══ ВКЛАДКА 3: Код для подземной части ══════════════════════ -->
-            <TabItem Header="Код для подземной части">
+            <TabItem x:Name="TabBelowGround" Header="Код для подземной части">
                 <Border Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,6,0,0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>

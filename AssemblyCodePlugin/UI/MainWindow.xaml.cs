@@ -41,10 +41,10 @@ namespace AssemblyCodePlugin.UI
             if (Rule?.RevitFilter == null) return;
             FilterTokens.Add(new FilterTokenViewModel { Label = "Кат.: ", Value = Rule.RevitFilter.CategoryDisplayName });
 
-            var conds = Rule.RevitFilter.GetEffectiveConditions();
+            var conds = Rule.RevitFilter.GetAllConditions();
             if (conds != null && conds.Count > 0)
             {
-                string joinOp = (Rule.RevitFilter.LogicalOperator == "OR" || Rule.RevitFilter.LogicalOperator == "ИЛИ") ? " [ИЛИ] " : " [И] ";
+                string joinOp = "; ";
                 bool first = true;
                 foreach (var cond in conds)
                 {
@@ -282,6 +282,10 @@ namespace AssemblyCodePlugin.UI
             if (CmbAssemblyCodeParam != null)
             {
                 CmbAssemblyCodeParam.ItemsSource = _availableParams;
+            }
+            if (CmbAssemblyDescParam != null)
+            {
+                CmbAssemblyDescParam.ItemsSource = _availableParams;
             }
 
             _rows = new ObservableCollection<RuleRowViewModel>(
@@ -532,8 +536,55 @@ namespace AssemblyCodePlugin.UI
                 if (match != null) CmbAssemblyCodeParam.SelectedItem = match;
                 else CmbAssemblyCodeParam.Text = s.AssemblyCodeParamName;
             }
+            if (CmbAssemblyDescParam != null)
+            {
+                var matchDesc = _availableParams.FirstOrDefault(p => string.Equals(p.Name, s.AssemblyDescriptionParamName, StringComparison.OrdinalIgnoreCase));
+                if (matchDesc != null) CmbAssemblyDescParam.SelectedItem = matchDesc;
+                else CmbAssemblyDescParam.Text = s.AssemblyDescriptionParamName;
+            }
+            UpdateDescParamVisibility();
 
-            if (ChkNeverAddBglSuffix != null) ChkNeverAddBglSuffix.IsChecked = s.NeverAddBglSuffix;
+            if (ChkDisableZoneSplit != null) ChkDisableZoneSplit.IsChecked = s.DisableZoneSplit;
+            UpdateZoneSplitVisibility();
+        }
+
+        private void ChkDisableZoneSplit_Click(object sender, RoutedEventArgs e)
+        {
+            _settings.DisableZoneSplit = ChkDisableZoneSplit.IsChecked == true;
+            UpdateZoneSplitVisibility();
+        }
+
+        private void UpdateZoneSplitVisibility()
+        {
+            bool disabled = _settings.DisableZoneSplit;
+            if (ZeroLevelSettingsPanel != null)
+                ZeroLevelSettingsPanel.Visibility = disabled ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+                
+            if (BtnConfigureUndergroundId != null)
+                BtnConfigureUndergroundId.Visibility = disabled ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+                
+            if (ColBelow != null)
+                ColBelow.Visibility = disabled ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+        }
+
+        private void CmbAssemblyCodeParam_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateDescParamVisibility();
+        }
+
+        private void CmbAssemblyCodeParam_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateDescParamVisibility();
+        }
+
+        private void UpdateDescParamVisibility()
+        {
+            if (PanelAssemblyDescParam == null || CmbAssemblyCodeParam == null) return;
+            string codeParam = CmbAssemblyCodeParam.Text?.Trim() ?? "";
+            bool isSystemCode = string.Equals(codeParam, "Assembly Code", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(codeParam, "Код по классификатору", StringComparison.OrdinalIgnoreCase);
+
+            PanelAssemblyDescParam.Visibility = isSystemCode ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
         }
 
         private void BtnConfigureUndergroundId_Click(object sender, RoutedEventArgs e)
@@ -543,7 +594,8 @@ namespace AssemblyCodePlugin.UI
                 _settings.UndergroundParamName,
                 _settings.UndergroundValueText,
                 _settings.AbovegroundValueText,
-                _settings.IsUndergroundParamYesNo
+                _settings.IsUndergroundParamYesNo,
+                _settings.NeverAddBglSuffix
             ) { Owner = this };
 
             if (dlg.ShowDialog() == true)
@@ -552,6 +604,7 @@ namespace AssemblyCodePlugin.UI
                 _settings.UndergroundValueText = dlg.ResultUndergroundValue;
                 _settings.AbovegroundValueText = dlg.ResultAbovegroundValue;
                 _settings.IsUndergroundParamYesNo = dlg.ResultIsYesNo;
+                _settings.NeverAddBglSuffix = dlg.ResultNeverAddBglSuffix;
                 SetStatus($"Идентификатор зоны: {_settings.UndergroundParamName} ({_settings.UndergroundValueText} / {_settings.AbovegroundValueText})");
             }
         }
@@ -573,8 +626,18 @@ namespace AssemblyCodePlugin.UI
             _settings.ZeroLevel.HighLevelName = CmbHighLevel.SelectedItem as string ?? "";
             _settings.ZeroLevel.LowLevelOffsetMm = TryParseDouble(TxtLowOffset.Text);
             _settings.ZeroLevel.HighLevelOffsetMm = TryParseDouble(TxtHighOffset.Text);
-            _settings.AssemblyCodeParamName = CmbAssemblyCodeParam.Text?.Trim() ?? "Код по классификатору";
-            if (ChkNeverAddBglSuffix != null) _settings.NeverAddBglSuffix = ChkNeverAddBglSuffix.IsChecked == true;
+            _settings.AssemblyCodeParamName = CmbAssemblyCodeParam?.Text?.Trim() ?? "Код по классификатору";
+            _settings.AssemblyDescriptionParamName = CmbAssemblyDescParam?.Text?.Trim() ?? "";
+            _settings.DisableZoneSplit = ChkDisableZoneSplit?.IsChecked == true;
+
+            if (PanelAssemblyDescParam != null && PanelAssemblyDescParam.Visibility == System.Windows.Visibility.Visible)
+            {
+                _settings.AssemblyDescriptionParamName = CmbAssemblyDescParam.Text?.Trim() ?? "";
+            }
+            else
+            {
+                _settings.AssemblyDescriptionParamName = "";
+            }
             _settings.LastClassifierFileName = currentClassifier;
 
             foreach (var row in _rows)
@@ -644,7 +707,7 @@ namespace AssemblyCodePlugin.UI
         private void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
             var newRule = new ClassificationRule { ElementTypeName = "Новый тип" };
-            var dlg = new RuleEditDialog(newRule, _doc) { Owner = this };
+            var dlg = new RuleEditDialog(newRule, _doc, _settings.DisableZoneSplit) { Owner = this };
             if (ConfigureAndShowRuleEditDialog(dlg) == true)
             {
                 var row = new RuleRowViewModel(dlg.Result);
@@ -672,7 +735,7 @@ namespace AssemblyCodePlugin.UI
         private void EditSelected()
         {
             if (GridRules.SelectedItem is not RuleRowViewModel row) return;
-            var dlg = new RuleEditDialog(row.Rule, _doc) { Owner = this };
+            var dlg = new RuleEditDialog(row.Rule, _doc, _settings.DisableZoneSplit) { Owner = this };
             if (ConfigureAndShowRuleEditDialog(dlg) == true)
             {
                 int idx = _rows.IndexOf(row);
@@ -749,10 +812,62 @@ namespace AssemblyCodePlugin.UI
         private void BtnRun_Click(object sender, RoutedEventArgs e)
         {
             SaveUiToSettings();
+            if (!CheckAndWarnIfRulesCollideOnType())
+            {
+                return;
+            }
             ConfigService.Save(_settings);
             _runRequested = true;
             DialogResult = true;
             Close();
+        }
+
+        private bool CheckAndWarnIfRulesCollideOnType()
+        {
+            var activeRules = _settings.Rules?.Where(r => r.IsEnabled && r.RevitFilter != null).ToList();
+            if (activeRules == null || activeRules.Count < 2) return true;
+
+            var byCategory = activeRules.GroupBy(r => r.RevitFilter.TargetCategory);
+            foreach (var group in byCategory)
+            {
+                var rulesInCat = group.ToList();
+                for (int i = 0; i < rulesInCat.Count; i++)
+                {
+                    for (int j = i + 1; j < rulesInCat.Count; j++)
+                    {
+                        var r1 = rulesInCat[i];
+                        var r2 = rulesInCat[j];
+
+                        bool r1HasSuffix = r1.RevitFilter.AppendTypeSuffix && !string.IsNullOrWhiteSpace(r1.RevitFilter.TypeSuffix);
+                        bool r2HasSuffix = r2.RevitFilter.AppendTypeSuffix && !string.IsNullOrWhiteSpace(r2.RevitFilter.TypeSuffix);
+
+                        if (!r1HasSuffix && !r2HasSuffix)
+                        {
+                            var c1Type = r1.RevitFilter.GetAllConditions().Where(c => string.Equals(c.ParamName, "Имя семейства", StringComparison.OrdinalIgnoreCase) || string.Equals(c.ParamName, "Имя типа", StringComparison.OrdinalIgnoreCase)).Select(c => $"{c.ParamName}:{c.Comparator}:{c.ValueString}").OrderBy(s => s);
+                            var c2Type = r2.RevitFilter.GetAllConditions().Where(c => string.Equals(c.ParamName, "Имя семейства", StringComparison.OrdinalIgnoreCase) || string.Equals(c.ParamName, "Имя типа", StringComparison.OrdinalIgnoreCase)).Select(c => $"{c.ParamName}:{c.Comparator}:{c.ValueString}").OrderBy(s => s);
+
+                            bool sameTypeFilters = c1Type.SequenceEqual(c2Type);
+                            bool hasInstanceFilters = r1.RevitFilter.GetAllConditions().Any(c => !string.Equals(c.ParamName, "Имя семейства", StringComparison.OrdinalIgnoreCase) && !string.Equals(c.ParamName, "Имя типа", StringComparison.OrdinalIgnoreCase)) ||
+                                                      r2.RevitFilter.GetAllConditions().Any(c => !string.Equals(c.ParamName, "Имя семейства", StringComparison.OrdinalIgnoreCase) && !string.Equals(c.ParamName, "Имя типа", StringComparison.OrdinalIgnoreCase));
+
+                            if (sameTypeFilters && hasInstanceFilters)
+                            {
+                                var result = MessageBox.Show(
+                                    $"⚠️ Предупреждение о коллизии правил!\n\n" +
+                                    $"Правила «{r1.ElementTypeName}» и «{r2.ElementTypeName}» фильтруют одну категорию ({r1.RevitFilter.CategoryDisplayName}) и имеют одинаковые условия по типам/семействам, но различаются параметрами экземпляра.\n\n" +
+                                    $"Если параметр кода по классификатору является параметром типа, элементы могут перезаписывать код друг друга.\n" +
+                                    $"Рекомендуется открыть настройки этих правил и включить опцию «Добавлять суффикс к имени типа».\n\n" +
+                                    $"Продолжить запуск плагина?",
+                                    "Предупреждение о правилах",
+                                    MessageBoxButton.YesNo,
+                                    MessageBoxImage.Warning);
+                                return result == MessageBoxResult.Yes;
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
         }
 
         private void BtnClose_Click(object sender, RoutedEventArgs e)

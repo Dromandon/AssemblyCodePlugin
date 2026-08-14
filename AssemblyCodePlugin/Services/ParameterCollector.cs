@@ -21,31 +21,20 @@ namespace AssemblyCodePlugin.Services
             var result = new Dictionary<string, ParamInfo>(StringComparer.OrdinalIgnoreCase);
             if (doc == null) return new List<ParamInfo>();
 
-            var categories = new[]
-            {
-                BuiltInCategory.OST_Walls,
-                BuiltInCategory.OST_Floors,
-                BuiltInCategory.OST_StructuralFraming,
-                BuiltInCategory.OST_StructuralColumns,
-                BuiltInCategory.OST_StructuralFoundation
-            };
-
             try
             {
                 // 1. Собираем параметры с типоразмеров и экземпляров
-                var filter = new ElementMulticategoryFilter(categories);
-
                 var instances = new FilteredElementCollector(doc)
-                    .WherePasses(filter)
                     .WhereElementIsNotElementType()
                     .ToElements()
-                    .Take(50);
+                    .Where(e => e.Category != null)
+                    .Take(150);
 
                 var types = new FilteredElementCollector(doc)
-                    .WherePasses(filter)
                     .WhereElementIsElementType()
                     .ToElements()
-                    .Take(50);
+                    .Where(e => e.Category != null)
+                    .Take(150);
 
                 foreach (var elem in instances.Concat(types))
                 {

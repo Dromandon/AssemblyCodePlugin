@@ -12,6 +12,59 @@ namespace AssemblyCodePlugin.Models
         public string ValueString { get; set; } = "";
     }
 
+    // ─── Узел дерева фильтрации (Группа или конкретное условие) ────────────────
+    public class FilterNode
+    {
+        // true = логическая группа (AND/OR), false = конкретное правило (лист)
+        public bool IsGroup { get; set; } = false;
+
+        // Поля для Группы
+        public string LogicalOperator { get; set; } = "AND"; // "AND" или "OR"
+        public List<FilterNode> Children { get; set; } = new List<FilterNode>();
+
+        // Поля для Условия
+        public string ParamName { get; set; } = "Имя типа";
+        public string Comparator { get; set; } = "Содержит";
+        public string ValueString { get; set; } = "";
+
+        // Удобные методы для рекурсивного клонирования
+        public FilterNode Clone()
+        {
+            var node = new FilterNode
+            {
+                IsGroup = this.IsGroup,
+                LogicalOperator = this.LogicalOperator,
+                ParamName = this.ParamName,
+                Comparator = this.Comparator,
+                ValueString = this.ValueString
+            };
+            if (this.Children != null)
+            {
+                foreach (var child in this.Children)
+                {
+                    node.Children.Add(child.Clone());
+                }
+            }
+            return node;
+        }
+
+        public string GetDisplayString()
+        {
+            if (!IsGroup)
+            {
+                return $"{ParamName} {Comparator} \"{ValueString}\"";
+            }
+            else
+            {
+                if (Children == null || Children.Count == 0) return "(Пусто)";
+                string op = (LogicalOperator == "OR" || LogicalOperator == "ИЛИ") ? " ИЛИ " : " И ";
+                var parts = Children.Select(c => c.GetDisplayString()).ToList();
+                if (parts.Count == 1) return parts[0];
+                return "(" + string.Join(op, parts) + ")";
+            }
+        }
+    }
+
     // ─── Фильтр для определения типа элемента ───────────────────────────────────
     public class RevitElementFilterRule
     {
@@ -19,57 +72,92 @@ namespace AssemblyCodePlugin.Models
         public string TargetCategory { get; set; } = "OST_Walls";
         public string CategoryDisplayName { get; set; } = "Стены";
 
+        // Добавлять суффикс к имени типа при классификации (для авто-дублирования типов)
+        public bool AppendTypeSuffix { get; set; } = false;
+        public string TypeSuffix { get; set; } = "";
+
         // Логика объединения: "AND" (Все условия должны выполняться) или "OR" (Хотя бы одно)
         public string LogicalOperator { get; set; } = "AND";
 
-        // Список гибких условий фильтрации
+        // Дерево условий (вместо плоского списка)
+        public FilterNode RootNode { get; set; }
+
+        // Список гибких условий фильтрации (СОХРАНЕН ДЛЯ ОБРАТНОЙ СОВМЕСТИМОСТИ)
         public List<FilterConditionRule> Conditions { get; set; } = new List<FilterConditionRule>();
 
-        // Устаревшие поля для обратной совместимости (сохраняются, если Conditions пуст)
+        // Устаревшие поля для обратной совместимости
         public List<string> FamilyNameContainsAny { get; set; } = new List<string>();
         public List<string> FamilyNameNotContains { get; set; } = new List<string>();
         public List<string> TypeNameContainsAny { get; set; } = new List<string>();
         public List<string> TypeNameNotContains { get; set; } = new List<string>();
 
-        public List<FilterConditionRule> GetEffectiveConditions()
+        /// <summary>
+        /// Возвращает корневой узел, автоматически выполняя миграцию из старых форматов (Conditions или массивы).
+        /// </summary>
+        public FilterNode GetEffectiveRootNode()
         {
-            if (Conditions != null && Conditions.Count > 0)
-                return Conditions;
+            if (RootNode != null)
+                return RootNode;
 
-            var list = new List<FilterConditionRule>();
+            // Если RootNode еще нет, создаем его на основе старых данных
+            var root = new FilterNode { IsGroup = true, LogicalOperator = this.LogicalOperator ?? "AND" };
+
+            // Сначала пробуем старый список Conditions
+            if (Conditions != null && Conditions.Count > 0)
+            {
+                foreach (var c in Conditions)
+                {
+                    root.Children.Add(new FilterNode
+                    {
+                        IsGroup = false,
+                        ParamName = c.ParamName,
+                        Comparator = c.Comparator,
+                        ValueString = c.ValueString
+                    });
+                }
+                RootNode = root;
+                return root;
+            }
+
+            // Иначе пробуем совсем старые массивы
             if (FamilyNameContainsAny != null)
-            {
                 foreach (var s in FamilyNameContainsAny)
-                {
                     if (!string.IsNullOrWhiteSpace(s))
-                        list.Add(new FilterConditionRule { ParamName = "Имя семейства", Comparator = "Содержит", ValueString = s.Trim() });
-                }
-            }
+                        root.Children.Add(new FilterNode { IsGroup = false, ParamName = "Имя семейства", Comparator = "Содержит", ValueString = s.Trim() });
+            
             if (FamilyNameNotContains != null)
-            {
                 foreach (var s in FamilyNameNotContains)
-                {
                     if (!string.IsNullOrWhiteSpace(s))
-                        list.Add(new FilterConditionRule { ParamName = "Имя семейства", Comparator = "Не содержит", ValueString = s.Trim() });
-                }
-            }
+                        root.Children.Add(new FilterNode { IsGroup = false, ParamName = "Имя семейства", Comparator = "Не содержит", ValueString = s.Trim() });
+            
             if (TypeNameContainsAny != null)
-            {
                 foreach (var s in TypeNameContainsAny)
-                {
                     if (!string.IsNullOrWhiteSpace(s))
-                        list.Add(new FilterConditionRule { ParamName = "Имя типа", Comparator = "Содержит", ValueString = s.Trim() });
-                }
-            }
+                        root.Children.Add(new FilterNode { IsGroup = false, ParamName = "Имя типа", Comparator = "Содержит", ValueString = s.Trim() });
+            
             if (TypeNameNotContains != null)
-            {
                 foreach (var s in TypeNameNotContains)
-                {
                     if (!string.IsNullOrWhiteSpace(s))
-                        list.Add(new FilterConditionRule { ParamName = "Имя типа", Comparator = "Не содержит", ValueString = s.Trim() });
-                }
-            }
-            return list;
+                        root.Children.Add(new FilterNode { IsGroup = false, ParamName = "Имя типа", Comparator = "Не содержит", ValueString = s.Trim() });
+
+            RootNode = root;
+            return root;
+        }
+
+        public List<FilterNode> GetAllConditions()
+        {
+            var result = new List<FilterNode>();
+            var root = GetEffectiveRootNode();
+            if (root != null)
+                CollectConditions(root, result);
+            return result;
+        }
+        
+        private void CollectConditions(FilterNode node, List<FilterNode> result)
+        {
+            if (!node.IsGroup) result.Add(node);
+            else if (node.Children != null)
+                foreach(var c in node.Children) CollectConditions(c, result);
         }
 
         [IgnoreDataMember]
@@ -77,14 +165,17 @@ namespace AssemblyCodePlugin.Models
         {
             get
             {
-                var conds = GetEffectiveConditions();
+                var root = GetEffectiveRootNode();
                 var parts = new List<string>();
                 parts.Add($"Кат.: {CategoryDisplayName}");
-                if (conds != null && conds.Count > 0)
+                
+                if (root != null && root.Children.Count > 0)
                 {
-                    string joinOp = (LogicalOperator == "OR" || LogicalOperator == "ИЛИ") ? " ИЛИ " : " И ";
-                    var condDescs = conds.Select(c => $"{c.ParamName} {c.Comparator} \"{c.ValueString}\"");
-                    parts.Add(string.Join(joinOp, condDescs));
+                    parts.Add(root.GetDisplayString());
+                }
+                if (AppendTypeSuffix && !string.IsNullOrWhiteSpace(TypeSuffix))
+                {
+                    parts.Add($"Суффикс типа: \"{TypeSuffix}\"");
                 }
                 return string.Join("; ", parts);
             }
@@ -174,12 +265,18 @@ namespace AssemblyCodePlugin.Models
                 SkipUnderground = SkipUnderground,
                 RevitFilter = new RevitElementFilterRule
                 {
-                    TargetCategory = RevitFilter?.TargetCategory ?? "OST_Walls",
-                    CategoryDisplayName = RevitFilter?.CategoryDisplayName ?? "",
-                    FamilyNameContainsAny = RevitFilter?.FamilyNameContainsAny?.ToList() ?? new List<string>(),
-                    FamilyNameNotContains = RevitFilter?.FamilyNameNotContains?.ToList() ?? new List<string>(),
-                    TypeNameContainsAny = RevitFilter?.TypeNameContainsAny?.ToList() ?? new List<string>(),
-                    TypeNameNotContains = RevitFilter?.TypeNameNotContains?.ToList() ?? new List<string>()
+                    TargetCategory = this.RevitFilter?.TargetCategory ?? "OST_Walls",
+                    CategoryDisplayName = this.RevitFilter?.CategoryDisplayName ?? "",
+                    AppendTypeSuffix = this.RevitFilter?.AppendTypeSuffix ?? false,
+                    TypeSuffix = this.RevitFilter?.TypeSuffix ?? "",
+                    LogicalOperator = this.RevitFilter?.LogicalOperator ?? "AND",
+                    RootNode = this.RevitFilter?.RootNode?.Clone(),
+                    // Сохраняем пустые старые коллекции, так как мы их уже мигрировали в RootNode
+                    Conditions = new List<FilterConditionRule>(),
+                    FamilyNameContainsAny = new List<string>(),
+                    FamilyNameNotContains = new List<string>(),
+                    TypeNameContainsAny = new List<string>(),
+                    TypeNameNotContains = new List<string>()
                 },
                 AboveGroundSearchRule = new ClassifierSearchRule
                 {

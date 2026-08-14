@@ -72,50 +72,29 @@ namespace AssemblyCodePlugin.Services
                 }
             }
 
-            // 4. Собираем целевые элементы
-            var categories = new[]
-            {
-                BuiltInCategory.OST_Walls,
-                BuiltInCategory.OST_Floors,
-                BuiltInCategory.OST_StructuralFraming,
-                BuiltInCategory.OST_StructuralColumns,
-                BuiltInCategory.OST_GenericModel,
-                BuiltInCategory.OST_StructuralFoundation,
-                BuiltInCategory.OST_EdgeSlab
-            };
-
             PluginLogger.Log("3. Сбор элементов целевых категорий из модели...");
             var allElements = new FilteredElementCollector(doc)
-                .WherePasses(new ElementMulticategoryFilter(categories))
                 .WhereElementIsNotElementType()
-                .ToElements();
+                .ToElements()
+                .Where(e => e.Category != null && e.Category.Id.IntegerValue != (int)BuiltInCategory.OST_SectionBox)
+                .Where(e => HasParameter(e, doc, settings.AssemblyCodeParamName))
+                .ToList();
 
             report.TotalElements = allElements.Count;
-            PluginLogger.Log($"   -> Всего элементов в целевых категориях: {allElements.Count}");
+            PluginLogger.Log($"   -> Всего собранных элементов: {allElements.Count}");
 
-            // Записываем элементы в группах в отчет
+            // Запоминаем элементы в группах для последующей кластеризации
             var groupedElements = allElements.Where(e => e.GroupId != ElementId.InvalidElementId).ToList();
-            foreach (var elem in groupedElements)
-            {
-                var elemType = doc.GetElement(elem.GetTypeId()) as ElementType;
-                report.GroupedElementItems.Add(new ReportElementItem
-                {
-                    ElementId = elem.Id.IntegerValue,
-                    ElementName = elem.Name ?? "",
-                    CategoryName = elem.Category?.Name ?? "",
-                    TypeName = elemType?.Name ?? "",
-                    Details = "Элемент в группе (пропущен)"
-                });
-            }
-            PluginLogger.Log($"   -> Элементов в группах (пропущено): {groupedElements.Count}");
+            PluginLogger.Log($"   -> Элементов в группах: {groupedElements.Count}");
 
             // ─── ЭТАП 1: ГРУППИРОВКА ПО ТИПОРАЗМЕРАМ ────────────────────────────────
             var elementsByTypeId = allElements
-                .Where(e => e.GroupId == ElementId.InvalidElementId)
                 .GroupBy(e => e.GetTypeId())
                 .ToList();
 
             PluginLogger.Log($"   -> Сгруппировано по типам: {elementsByTypeId.Count} групп типоразмеров.");
+
+            var pendingGroupMutations = new Dictionary<ElementId, ElementMutation>();
 
             using (var tx = new Transaction(doc, "Заполнение кодификатора (Antigravity)"))
             {
@@ -148,35 +127,23 @@ namespace AssemblyCodePlugin.Services
                     int countInGroup = group.Count();
                     PluginLogger.Log($"   [{idx}/{totalGroups}] Тип '{elemType.Name}' ({countInGroup} экз.). Поиск правила...");
 
-                    // Находим правило классификации ОДИН РАЗ НА ТИП
-                    var firstElem = group.First();
-                    var rule = ElementTypeDetector.FindMatchingRule(firstElem, elemType, settings.Rules);
-                    if (rule == null)
-                    {
-                        PluginLogger.Log($"       -> Правило не найдено. Пропуск.");
-                        foreach (var elem in group)
-                        {
-                            report.UnassignedElementItems.Add(new ReportElementItem
-                            {
-                                ElementId = elem.Id.IntegerValue,
-                                ElementName = elem.Name ?? "",
-                                CategoryName = elem.Category?.Name ?? "",
-                                TypeName = elemType.Name ?? "",
-                                Details = "Правило классификации не найдено"
-                            });
-                        }
-                        continue;
-                    }
-
-                    // Разделяем элементы группы на надземные и подземные
-                    var aboveElements = new List<Element>();
-                    var belowElements = new List<Element>();
-
+                    // Разделяем элементы группы по правилу и зоне
                     var swZone = System.Diagnostics.Stopwatch.StartNew();
+                    
+                    var elementsByRuleAndZone = new Dictionary<Tuple<ClassificationRule, ZoneResult>, List<Element>>();
+                    var unassignedElements = new List<Element>();
+
                     foreach (var elem in group)
                     {
-                        var zone = ZoneDeterminator.DetermineZone(elem, zeroCtx);
-                        if (zone == ZoneResult.Spanning)
+                        var rule = ElementTypeDetector.FindMatchingRule(elem, elemType, settings.Rules);
+                        if (rule == null)
+                        {
+                            unassignedElements.Add(elem);
+                            continue;
+                        }
+
+                        var zone = settings.DisableZoneSplit ? ZoneResult.AboveZero : ZoneDeterminator.DetermineZone(elem, zeroCtx);
+                        if (!settings.DisableZoneSplit && zone == ZoneResult.Spanning)
                         {
                             report.SpanningElements.Add($"Id={elem.Id} | Тип={elemType.Name}");
                             report.SpanningElementItems.Add(new ReportElementItem
@@ -191,32 +158,61 @@ namespace AssemblyCodePlugin.Services
                             double centerZ = box != null ? (box.Min.Z + box.Max.Z) / 2.0 : zeroCtx.LowElevation;
                             zone = centerZ >= zeroCtx.HighElevation ? ZoneResult.AboveZero : ZoneResult.BelowZero;
                         }
-
-                        if (zone == ZoneResult.BelowZero)
-                            belowElements.Add(elem);
-                        else if (zone == ZoneResult.AboveZero)
-                            aboveElements.Add(elem);
+                        
+                        var key = Tuple.Create(rule, zone);
+                        if (!elementsByRuleAndZone.TryGetValue(key, out var list))
+                        {
+                            list = new List<Element>();
+                            elementsByRuleAndZone[key] = list;
+                        }
+                        list.Add(elem);
                     }
                     swZone.Stop();
                     report.ZoneCalcSeconds += swZone.Elapsed.TotalSeconds;
 
-                    PluginLogger.Log($"       -> Зоны: надземных={aboveElements.Count}, подземных={belowElements.Count} (расчет за {swZone.Elapsed.TotalMilliseconds:F1} мс)");
-
-                    // Обрабатываем надземную подгруппу
-                    if (aboveElements.Count > 0)
+                    if (unassignedElements.Count > 0)
                     {
-                        ProcessSubgroup(
-                            doc, aboveElements, elemType, isUnderground: false,
-                            rule, classifierItems, byCode, settings, typesByNameAndClass, report);
+                        if (unassignedElements.Count == group.Count())
+                            PluginLogger.Log($"       -> Правило не найдено для всех ({unassignedElements.Count}) экз. Пропуск.");
+                        else
+                            PluginLogger.Log($"       -> Для {unassignedElements.Count} экз. правило не найдено. Пропуск.");
+                        
+                        foreach (var elem in unassignedElements)
+                        {
+                            report.UnassignedElementItems.Add(new ReportElementItem
+                            {
+                                ElementId = elem.Id.IntegerValue,
+                                ElementName = elem.Name ?? "",
+                                CategoryName = elem.Category?.Name ?? "",
+                                TypeName = elemType.Name ?? "",
+                                Details = "Правило классификации не найдено"
+                            });
+                        }
                     }
 
-                    // Обрабатываем подземную подгруппу
-                    if (belowElements.Count > 0)
+                    foreach (var kvp in elementsByRuleAndZone)
                     {
+                        var rule = kvp.Key.Item1;
+                        var zone = kvp.Key.Item2;
+                        var elems = kvp.Value;
+                        bool isUnderground = zone == ZoneResult.BelowZero;
+
+                        bool canRenameSourceType = (elems.Count == countInGroup);
+
+                        PluginLogger.Log($"       -> Правило '{rule.ElementTypeName}': {(isUnderground ? "подземных" : "надземных")}={elems.Count}");
+                        
                         ProcessSubgroup(
-                            doc, belowElements, elemType, isUnderground: true,
-                            rule, classifierItems, byCode, settings, typesByNameAndClass, report);
+                            doc, elems, elemType, isUnderground,
+                            rule, classifierItems, byCode, settings, typesByNameAndClass, report, canRenameSourceType, pendingGroupMutations);
                     }
+                }
+
+                // После обработки всех элементов по типам, запускаем обработку сгруппированных элементов
+                if (pendingGroupMutations.Count > 0)
+                {
+                    PluginLogger.Log("4.5. Обработка мутаций для сгруппированных элементов (Phantom Group Pipeline)...");
+                    var clusters = ClusterizeGroupMutations(doc, groupedElements, pendingGroupMutations);
+                    GroupMutationManager.ProcessGroups(doc, clusters, report);
                 }
 
                 PluginLogger.Log("5. Коммит транзакции (Revit применяет изменения)...");
@@ -231,6 +227,14 @@ namespace AssemblyCodePlugin.Services
             return report;
         }
 
+        private static bool HasParameter(Element e, Document doc, string paramName)
+        {
+            if (e.LookupParameter(paramName) != null) return true;
+            var type = doc.GetElement(e.GetTypeId()) as ElementType;
+            if (type != null && type.LookupParameter(paramName) != null) return true;
+            return false;
+        }
+
         private static void ProcessSubgroup(
             Document doc,
             List<Element> elements,
@@ -241,20 +245,24 @@ namespace AssemblyCodePlugin.Services
             IReadOnlyDictionary<string, AssemblyCodeItem> byCode,
             PluginSettings settings,
             Dictionary<(Type classType, string name), ElementType> typeIndex,
-            ProcessingReport report)
+            ProcessingReport report,
+            bool canRenameSourceType,
+            Dictionary<ElementId, ElementMutation> pendingGroupMutations)
         {
-            bool excludeFromBgl = rule.ExcludeFromBglRename || (settings != null && settings.NeverAddBglSuffix);
+            bool excludeFromBgl = (settings != null && settings.DisableZoneSplit) || rule.ExcludeFromBglRename || (settings != null && settings.NeverAddBglSuffix);
+            string ruleSuffix = (rule.RevitFilter != null && rule.RevitFilter.AppendTypeSuffix) ? rule.RevitFilter.TypeSuffix : "";
             ElementType targetType = EnsureCorrectTypeNameFast(
-                sourceType, isUnderground, excludeFromBgl, typeIndex, report);
+                sourceType, isUnderground, excludeFromBgl, ruleSuffix, typeIndex, report, canRenameSourceType);
 
             PluginLogger.Log($"          -> [{(isUnderground ? "ПОДЗЕМНАЯ" : "НАДЗЕМНАЯ")} ({elements.Count} экз.)] Целевой тип: '{targetType.Name}'");
 
-            // 2. Назначаем Assembly Code В ТИПОРАЗМЕР (1 раз на тип!)
+            // 2. Назначаем Assembly Code и Описание В ТИПОРАЗМЕР (1 раз на тип!)
             bool skipClassification = isUnderground ? rule.SkipUnderground : rule.SkipAboveGround;
             if (!skipClassification)
             {
                 string verifiedRaw = isUnderground ? rule.VerifiedBelowCode : rule.VerifiedAboveCode;
                 string code = ExtractCodeFromPreview(verifiedRaw);
+                AssemblyCodeItem matchedItem = null;
 
                 if (string.IsNullOrEmpty(code))
                 {
@@ -262,15 +270,45 @@ namespace AssemblyCodePlugin.Services
                         ? rule.UndergroundSearchRule
                         : rule.AboveGroundSearchRule;
 
-                    var bestItem = ClassifierRatingEngine.FindBestMatch(
+                    matchedItem = ClassifierRatingEngine.FindBestMatch(
                         classifierItems, byCode, searchRule, isUnderground);
 
-                    code = bestItem != null ? bestItem.Code : "";
+                    code = matchedItem != null ? matchedItem.Code : "";
+                }
+                else if (byCode != null && byCode.TryGetValue(code, out var itemByCode))
+                {
+                    matchedItem = itemByCode;
                 }
 
                 if (!string.IsNullOrEmpty(code))
                 {
+                    // 1. Записываем код в типоразмер
                     TrySetStringParamIfChanged(targetType, settings.AssemblyCodeParamName, code);
+
+                    // Если параметр кода является параметром экземпляра — записываем во все элементы
+                    bool isCodeInstanceParam = elements.Count > 0 && IsWritableInstanceParam(elements[0], settings.AssemblyCodeParamName);
+                    if (isCodeInstanceParam)
+                    {
+                        foreach (var elem in elements)
+                        {
+                            SetInstanceParamSafe(elem, settings.AssemblyCodeParamName, code, doc, pendingGroupMutations);
+                        }
+                    }
+
+                    // 2. Записываем описание, если настроен параметр описания
+                    if (!string.IsNullOrWhiteSpace(settings.AssemblyDescriptionParamName) && matchedItem != null && !string.IsNullOrEmpty(matchedItem.Description))
+                    {
+                        TrySetStringParamIfChanged(targetType, settings.AssemblyDescriptionParamName, matchedItem.Description);
+
+                        bool isDescInstanceParam = elements.Count > 0 && IsWritableInstanceParam(elements[0], settings.AssemblyDescriptionParamName);
+                        if (isDescInstanceParam)
+                        {
+                            foreach (var elem in elements)
+                            {
+                                SetInstanceParamSafe(elem, settings.AssemblyDescriptionParamName, matchedItem.Description, doc, pendingGroupMutations);
+                            }
+                        }
+                    }
                 }
                 else
                 {
@@ -306,15 +344,20 @@ namespace AssemblyCodePlugin.Services
                 }
             }
 
-            // 3. Записываем FAM_Underground в ТИПОРАЗМЕР (если это параметр типа)
-            string undergroundText = isUnderground
-                ? settings.UndergroundValueText
-                : settings.AbovegroundValueText;
+            bool isInstanceParam = false;
+            string undergroundText = "";
+            if (settings == null || !settings.DisableZoneSplit)
+            {
+                // 3. Записываем FAM_Underground в ТИПОРАЗМЕР (если это параметр типа)
+                undergroundText = isUnderground
+                    ? settings.UndergroundValueText
+                    : settings.AbovegroundValueText;
 
-            TrySetStringParamIfChanged(targetType, settings.UndergroundParamName, undergroundText);
+                TrySetStringParamIfChanged(targetType, settings.UndergroundParamName, undergroundText);
 
-            // Проверяем 1 раз для подгруппы: является ли FAM_Underground параметром ЭКЗЕМПЛЯРА
-            bool isInstanceParam = elements.Count > 0 && IsWritableInstanceParam(elements[0], settings.UndergroundParamName);
+                // Проверяем 1 раз для подгруппы: является ли FAM_Underground параметром ЭКЗЕМПЛЯРА
+                isInstanceParam = elements.Count > 0 && IsWritableInstanceParam(elements[0], settings.UndergroundParamName);
+            }
 
             // 4. Обходим элементы подгруппы:
             var swChange = System.Diagnostics.Stopwatch.StartNew();
@@ -323,7 +366,7 @@ namespace AssemblyCodePlugin.Services
             {
                 if (elem.GetTypeId() != targetType.Id)
                 {
-                    FastChangeTypeId(elem, targetType.Id);
+                    ChangeTypeIdSafe(elem, targetType.Id, pendingGroupMutations);
                     changedTypeCount++;
                 }
             }
@@ -340,7 +383,7 @@ namespace AssemblyCodePlugin.Services
                 var swParam = System.Diagnostics.Stopwatch.StartNew();
                 foreach (var elem in elements)
                 {
-                    TrySetStringParamIfChanged(elem, settings.UndergroundParamName, undergroundText);
+                    SetInstanceParamSafe(elem, settings.UndergroundParamName, undergroundText, doc, pendingGroupMutations);
                 }
                 swParam.Stop();
                 report.ParamSetSeconds += swParam.Elapsed.TotalSeconds;
@@ -348,48 +391,272 @@ namespace AssemblyCodePlugin.Services
             report.UpdatedElements += elements.Count;
         }
 
-        private static void FastChangeTypeId(Element elem, ElementId targetTypeId)
+        private static void ChangeTypeIdSafe(Element elem, ElementId targetTypeId, Dictionary<ElementId, ElementMutation> pending)
         {
-            var typeParam = elem.get_Parameter(BuiltInParameter.ELEM_TYPE_PARAM);
-            if (typeParam != null && !typeParam.IsReadOnly)
+            if (elem == null || targetTypeId == null || targetTypeId == ElementId.InvalidElementId) return;
+            if (elem.GetTypeId() == targetTypeId) return;
+
+            if (elem.GroupId != ElementId.InvalidElementId)
             {
-                typeParam.Set(targetTypeId);
+                if (!pending.TryGetValue(elem.Id, out var mut))
+                {
+                    mut = new ElementMutation { ElementId = elem.Id, OriginalTypeId = elem.GetTypeId() };
+                    pending[elem.Id] = mut;
+                }
+                mut.TargetTypeId = targetTypeId;
             }
             else
             {
-                elem.ChangeTypeId(targetTypeId);
+                FastChangeTypeId(elem, targetTypeId);
+            }
+        }
+
+        private static void SetInstanceParamSafe(Element elem, string paramName, string value, Document doc, Dictionary<ElementId, ElementMutation> pending)
+        {
+            if (elem == null || string.IsNullOrEmpty(paramName)) return;
+
+            if (elem.GroupId != ElementId.InvalidElementId)
+            {
+                var param = elem.LookupParameter(paramName);
+                if (param == null || param.IsReadOnly) return;
+                
+                // Проверяем VariesAcrossGroups
+                bool varies = false;
+                if (param.Definition is InternalDefinition id)
+                {
+                    try { varies = id.VariesAcrossGroups; } catch { }
+                }
+
+                if (varies)
+                {
+                    TrySetStringParamIfChanged(elem, paramName, value);
+                }
+                else
+                {
+                    if (param.AsString() == value || (string.IsNullOrEmpty(param.AsString()) && string.IsNullOrEmpty(value))) return;
+
+                    if (!pending.TryGetValue(elem.Id, out var mut))
+                    {
+                        mut = new ElementMutation { ElementId = elem.Id, OriginalTypeId = elem.GetTypeId() };
+                        pending[elem.Id] = mut;
+                    }
+                    mut.StringParameters[paramName] = value;
+                }
+            }
+            else
+            {
+                TrySetStringParamIfChanged(elem, paramName, value);
+            }
+        }
+
+        private static List<GroupCluster> ClusterizeGroupMutations(
+            Document doc, 
+            List<Element> groupedElements, 
+            Dictionary<ElementId, ElementMutation> pendingGroupMutations)
+        {
+            var groupIds = groupedElements.Select(e => e.GroupId).Distinct().ToList();
+            var clusters = new List<GroupCluster>();
+
+            var groupsByType = groupIds
+                .Select(id => doc.GetElement(id) as Group)
+                .Where(g => g != null)
+                .GroupBy(g => g.GroupType.Id)
+                .ToList();
+
+            foreach (var typeGroup in groupsByType)
+            {
+                var groupType = doc.GetElement(typeGroup.Key) as GroupType;
+                if (groupType == null) continue;
+
+                // Быстрая проверка: есть ли вообще мутации для этой группы?
+                bool hasMutations = false;
+                foreach (var groupInst in typeGroup)
+                {
+                    foreach (var mId in groupInst.GetMemberIds())
+                    {
+                        if (pendingGroupMutations.TryGetValue(mId, out var mut) && mut.HasChanges())
+                        {
+                            hasMutations = true;
+                            break;
+                        }
+                    }
+                    if (hasMutations) break;
+                }
+
+                if (!hasMutations) continue;
+
+                var firstInst = typeGroup.FirstOrDefault();
+                bool has2DElements = false;
+                if (firstInst != null)
+                {
+                    foreach (var mId in firstInst.GetMemberIds())
+                    {
+                        var mElem = doc.GetElement(mId);
+                        if (mElem != null && mElem.ViewSpecific)
+                        {
+                            has2DElements = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (has2DElements)
+                {
+                    PluginLogger.Log($"       [Внимание] Группа '{groupType.Name}' пропущена, так как содержит 2D-элементы (ViewSpecific).");
+                    continue;
+                }
+
+                var clustersForType = new Dictionary<string, GroupCluster>();
+                
+                // Создаем эталонный экземпляр в 0,0,0 для вычисления точного угла поворота
+                Group referenceGroup = doc.Create.PlaceGroup(XYZ.Zero, groupType);
+
+                foreach (var groupInst in typeGroup)
+                {
+                    var memberIds = groupInst.GetMemberIds();
+                    
+                    double rotAngle = GroupMutationManager.CalculateGroupRotation(groupInst, referenceGroup);
+                    Transform groupTransform = Transform.Identity;
+                    groupTransform.Origin = (groupInst.Location as LocationPoint)?.Point ?? XYZ.Zero;
+                    groupTransform.BasisX = new XYZ(Math.Cos(rotAngle), Math.Sin(rotAngle), 0);
+                    groupTransform.BasisY = new XYZ(-Math.Sin(rotAngle), Math.Cos(rotAngle), 0);
+                    
+                    var instMutations = new Dictionary<string, ElementMutation>(); // Ключ - локальные координаты
+                    var hashParts = new List<string>();
+                    
+                    for (int i = 0; i < memberIds.Count; i++)
+                    {
+                        if (pendingGroupMutations.TryGetValue(memberIds[i], out var mut) && mut.HasChanges())
+                        {
+                            var elem = doc.GetElement(memberIds[i]);
+                            if (elem == null) continue;
+                            
+                            XYZ globalCenter = GroupMutationManager.GetElementCenter(elem);
+                            XYZ localCenter = groupTransform.Inverse.OfPoint(globalCenter);
+                            
+                            // Округляем до миллиметра для надежного сравнения (1 фут = 304.8 мм)
+                            string localKey = $"{Math.Round(localCenter.X * 304.8)}:{Math.Round(localCenter.Y * 304.8)}:{Math.Round(localCenter.Z * 304.8)}";
+                            
+                            string mutStr = $"{localKey}:T={mut.TargetTypeId?.IntegerValue ?? 0};";
+                            foreach (var p in mut.StringParameters.OrderBy(k => k.Key))
+                            {
+                                mutStr += $"{p.Key}={p.Value};";
+                            }
+                            hashParts.Add(mutStr);
+                            instMutations[localKey] = mut;
+                        }
+                    }
+
+                    if (hashParts.Count == 0) continue;
+
+                    hashParts.Sort(); // Сортируем, чтобы порядок элементов не имел значения
+                    string hash = string.Join("|", hashParts);
+
+                    if (!clustersForType.TryGetValue(hash, out var cluster))
+                    {
+                        cluster = new GroupCluster
+                        {
+                            OriginalGroupType = groupType,
+                            PatternMutations = instMutations, // Мутации теперь по локальному ключу
+                            TargetGroupTypeName = groupType.Name
+                        };
+                        clustersForType[hash] = cluster;
+                    }
+                    
+                    cluster.Instances.Add(groupInst);
+                }
+                
+                doc.Delete(referenceGroup.Id); // Удаляем эталон после обработки типа
+
+                foreach (var kvp in clustersForType)
+                {
+                    var cluster = kvp.Value;
+                    string suffix = "";
+                    foreach (var mut in cluster.PatternMutations.Values)
+                    {
+                        if (mut.TargetTypeId != null)
+                        {
+                            var t = doc.GetElement(mut.TargetTypeId) as ElementType;
+                            if (t != null && t.Name.Contains("_"))
+                            {
+                                int idx = t.Name.LastIndexOf('_');
+                                if (idx > 0)
+                                {
+                                    string potentialSuffix = t.Name.Substring(idx);
+                                    if (potentialSuffix == "_BGL" || potentialSuffix.StartsWith("_L") || potentialSuffix.StartsWith("_S"))
+                                    {
+                                        suffix = potentialSuffix;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(suffix)) cluster.TargetGroupTypeName += suffix;
+                    
+                    clusters.Add(cluster);
+                }
+            }
+
+            return clusters;
+        }
+
+        private static void FastChangeTypeId(Element elem, ElementId targetTypeId)
+        {
+            if (elem == null || targetTypeId == null || targetTypeId == ElementId.InvalidElementId) return;
+
+            // Если элемент внутри группы, и мы дошли сюда, значит мы пытаемся изменить тип напрямую (допустим, для свободных).
+            // Если он в группе - пропустить.
+            if (elem.GroupId != ElementId.InvalidElementId) return;
+
+            try
+            {
+                var typeParam = elem.get_Parameter(BuiltInParameter.ELEM_TYPE_PARAM);
+                if (typeParam != null && !typeParam.IsReadOnly)
+                {
+                    typeParam.Set(targetTypeId);
+                }
+                else
+                {
+                    elem.ChangeTypeId(targetTypeId);
+                }
+            }
+            catch (Exception ex)
+            {
+                PluginLogger.Log($"          [Внимание] Не удалось изменить TypeId у элемента {elem.Id.IntegerValue}: {ex.Message}");
             }
         }
 
         private static ElementType EnsureCorrectTypeNameFast(
-            ElementType source, bool isUnderground, bool excludeFromRename,
+            ElementType source, bool isUnderground, bool excludeFromRename, string ruleTypeSuffix,
             Dictionary<(Type classType, string name), ElementType> typeIndex,
-            ProcessingReport report)
+            ProcessingReport report,
+            bool canRenameSourceType)
         {
-            if (excludeFromRename || source == null) return source;
+            if (source == null) return source;
 
             string name = source.Name?.TrimEnd() ?? "";
-            bool endsWithBgl = name.EndsWith("_BGL", StringComparison.OrdinalIgnoreCase);
-            bool endsWithDoubleBgl = name.EndsWith("_BGL_BGL", StringComparison.OrdinalIgnoreCase);
-
-            // Быстрая проверка: если элемент уже назван верно, мгновенно возвращаем его без изменений
-            if (isUnderground && endsWithBgl && !endsWithDoubleBgl)
-            {
-                return source;
-            }
-            if (!isUnderground && !endsWithBgl)
-            {
-                return source;
-            }
-
-            // Иначе очищаем суффиксы и формируем целевое имя
             string cleanName = name;
             while (cleanName.EndsWith("_BGL", StringComparison.OrdinalIgnoreCase))
             {
                 cleanName = cleanName.Substring(0, cleanName.Length - 4).TrimEnd();
             }
 
-            string targetName = isUnderground ? cleanName + "_BGL" : cleanName;
+            string suffixToAdd = "";
+            if (!string.IsNullOrWhiteSpace(ruleTypeSuffix))
+            {
+                string ts = ruleTypeSuffix.Trim();
+                if (!cleanName.EndsWith(ts, StringComparison.OrdinalIgnoreCase))
+                {
+                    suffixToAdd = ts;
+                }
+            }
+
+            string targetName = cleanName + suffixToAdd;
+            if (isUnderground && !excludeFromRename)
+            {
+                targetName += "_BGL";
+            }
 
             if (string.Equals(name, targetName, StringComparison.OrdinalIgnoreCase))
             {
@@ -402,7 +669,24 @@ namespace AssemblyCodePlugin.Services
                 return existingType;
             }
 
-            // Типоразмера ещё нет в проекте — создаём дубликат
+            // Если все обрабатываемые элементы исходного типа идут в этот новый тип,
+            // мы можем не создавать дубликат, а безопасно переименовать сам тип!
+            // Это спасёт сгруппированные элементы от разгруппировки (ибо мы меняем имя типа, а не TypeId у экземпляров).
+            if (canRenameSourceType)
+            {
+                try
+                {
+                    source.Name = targetName;
+                    typeIndex[lookupKey] = source;
+                    return source;
+                }
+                catch
+                {
+                    // Скорее всего имя уже занято. Идём дальше и пытаемся создать дубликат.
+                }
+            }
+
+            // Типоразмера ещё нет в проекте (или не смогли переименовать) — создаём дубликат
             try
             {
                 var dup = source.Duplicate(targetName);
@@ -426,48 +710,58 @@ namespace AssemblyCodePlugin.Services
         private static bool TrySetStringParamIfChanged(Element elem, string paramName, string value)
         {
             if (elem == null || string.IsNullOrEmpty(paramName)) return false;
-            var param = elem.LookupParameter(paramName);
-            if (param == null || param.IsReadOnly) return false;
+            try
+            {
+                var param = elem.LookupParameter(paramName);
+                if (param == null || param.IsReadOnly) return false;
 
-            if (param.StorageType == StorageType.String)
-            {
-                string currentVal = param.AsString();
-                if (!string.Equals(currentVal, value, StringComparison.Ordinal))
+                if (param.StorageType == StorageType.String)
                 {
-                    param.Set(value ?? "");
-                    return true;
-                }
-            }
-            else if (param.StorageType == StorageType.Integer)
-            {
-                int targetInt = 0;
-                if (string.Equals(value, "Да", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(value, "Yes", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(value, "True", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(value, "1", StringComparison.Ordinal))
-                {
-                    targetInt = 1;
-                }
-                else
-                {
-                    int.TryParse(value, out targetInt);
-                }
-
-                if (param.AsInteger() != targetInt)
-                {
-                    param.Set(targetInt);
-                    return true;
-                }
-            }
-            else if (param.StorageType == StorageType.Double)
-            {
-                if (double.TryParse(value, out double targetDouble))
-                {
-                    if (Math.Abs(param.AsDouble() - targetDouble) > 1e-6)
+                    string currentVal = param.AsString();
+                    if (!string.Equals(currentVal, value, StringComparison.Ordinal))
                     {
-                        param.Set(targetDouble);
+                        param.Set(value ?? "");
                         return true;
                     }
+                }
+                else if (param.StorageType == StorageType.Integer)
+                {
+                    int targetInt = 0;
+                    if (string.Equals(value, "Да", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(value, "Yes", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(value, "True", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(value, "1", StringComparison.Ordinal))
+                    {
+                        targetInt = 1;
+                    }
+                    else
+                    {
+                        int.TryParse(value, out targetInt);
+                    }
+
+                    if (param.AsInteger() != targetInt)
+                    {
+                        param.Set(targetInt);
+                        return true;
+                    }
+                }
+                else if (param.StorageType == StorageType.Double)
+                {
+                    if (double.TryParse(value, out double targetDouble))
+                    {
+                        if (Math.Abs(param.AsDouble() - targetDouble) > 1e-6)
+                        {
+                            param.Set(targetDouble);
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (elem.GroupId != ElementId.InvalidElementId)
+                {
+                    PluginLogger.Log($"          [Внимание] Параметр '{paramName}' у элемента {elem.Id.IntegerValue} в группе {elem.GroupId.IntegerValue} не может быть изменён напрямую: {ex.Message}");
                 }
             }
             return false;
