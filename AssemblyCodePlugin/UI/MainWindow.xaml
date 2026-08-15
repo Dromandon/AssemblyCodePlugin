@@ -374,62 +374,84 @@
                                     <Setter.Value>
                                         <ControlTemplate TargetType="{x:Type GroupItem}">
                                             <StackPanel Margin="0,0,0,12">
-                                                <!-- Кнопка-заголовок -->
-                                                <ToggleButton x:Name="GroupHeaderBtn" IsChecked="True" Cursor="Hand" BorderThickness="1" Background="#F0F9FF" BorderBrush="#BAE6FD">
-                                                    <ToggleButton.Template>
-                                                        <ControlTemplate TargetType="ToggleButton">
-                                                            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6,6,0,0" Padding="14,10">
-                                                                <Grid>
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="Auto"/>
-                                                                        <ColumnDefinition Width="Auto"/>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                    </Grid.ColumnDefinitions>
-                                                                    
-                                                                    <!-- Индикатор сворачивания (Стрелка слева) -->
-                                                                    <TextBlock x:Name="Arrow" Grid.Column="0" Text="▼" Foreground="#0284C7" FontSize="12" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,10,0"/>
-                                                                    
-                                                                    <!-- Иконка папки -->
-                                                                    <TextBlock Grid.Column="1" Text="📁" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                                    
-                                                                    <!-- Текст -->
-                                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#0F172A" FontSize="14"/>
-                                                                        <TextBlock Text="{Binding ItemCount, StringFormat=' — {0} правил'}" Foreground="#64748B" FontSize="13" VerticalAlignment="Center"/>
-                                                                    </StackPanel>
-                                                                </Grid>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="Bd" Property="Background" Value="#E0F2FE"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsChecked" Value="False">
-                                                                    <Setter TargetName="Arrow" Property="Text" Value="▶"/>
-                                                                    <Setter TargetName="Arrow" Property="Foreground" Value="#64748B"/>
-                                                                    <Setter TargetName="Bd" Property="CornerRadius" Value="6"/>
-                                                                    <Setter TargetName="Bd" Property="Background" Value="#F8FAFC"/>
-                                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#CBD5E1"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </ToggleButton.Template>
-                                                </ToggleButton>
+                                                <!-- Шапка папки -->
+                                                <Border x:Name="Bd" Background="#F0F9FF" BorderBrush="#BAE6FD" BorderThickness="1" CornerRadius="6,6,0,0" Padding="14,10">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        
+                                                        <!-- Кнопки управления папкой (Слева, ВНЕ ToggleButton) -->
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                                            <Button ToolTip="Поднять папку выше" Click="BtnMoveFolderUp_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="0" Margin="0,0,4,0">
+                                                                <Border Background="#E2E8F0" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="3" Padding="6,3">
+                                                                    <TextBlock Text="▲" FontSize="9" FontWeight="ExtraBold" Foreground="#475569" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                                </Border>
+                                                            </Button>
+                                                            <Button ToolTip="Опустить папку ниже" Click="BtnMoveFolderDown_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="0">
+                                                                <Border Background="#E2E8F0" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="3" Padding="6,3">
+                                                                    <TextBlock Text="▼" FontSize="9" FontWeight="ExtraBold" Foreground="#475569" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                                </Border>
+                                                            </Button>
+                                                        </StackPanel>
+
+                                                        <!-- Кнопка-заголовок (Сворачивание) -->
+                                                        <ToggleButton x:Name="GroupHeaderBtn" Grid.Column="1" IsChecked="True" Cursor="Hand" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Checked="Folder_Checked" Unchecked="Folder_Unchecked" Loaded="Folder_Loaded">
+                                                            <ToggleButton.Template>
+                                                                <ControlTemplate TargetType="ToggleButton">
+                                                                    <Grid Background="Transparent">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="Auto"/>
+                                                                            <ColumnDefinition Width="Auto"/>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        
+                                                                        <!-- Индикатор сворачивания (Стрелка) -->
+                                                                        <TextBlock x:Name="Arrow" Grid.Column="0" Text="▼" Foreground="#0284C7" FontSize="12" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,10,0"/>
+                                                                        
+                                                                        <!-- Иконка папки -->
+                                                                        <TextBlock Grid.Column="1" Text="📁" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                                        
+                                                                        <!-- Текст -->
+                                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#0F172A" FontSize="14"/>
+                                                                            <TextBlock Text="{Binding ItemCount, StringFormat=' — {0} правил'}" Foreground="#64748B" FontSize="13" VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                    </Grid>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsChecked" Value="False">
+                                                                            <Setter TargetName="Arrow" Property="Text" Value="▶"/>
+                                                                            <Setter TargetName="Arrow" Property="Foreground" Value="#64748B"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </ToggleButton.Template>
+                                                        </ToggleButton>
+                                                    </Grid>
+                                                </Border>
                                                 
-                                                <!-- Содержимое группы -->
-                                                <Border x:Name="GroupContent" Background="#F8FAFC" BorderBrush="#BAE6FD" BorderThickness="1,0,1,1" CornerRadius="0,0,6,6" Padding="4,4,4,4">
+                                                <!-- Содержимое группы с фоном -->
+                                                <Border x:Name="GroupContent" Background="#F1F5F9" BorderBrush="#BAE6FD" BorderThickness="1,0,1,1" CornerRadius="0,0,6,6" Padding="4,4,4,4">
                                                     <ItemsPresenter />
                                                 </Border>
                                                 
-                                                <!-- Обычный список для элементов без папки -->
+                                                <!-- Обычный список для элементов без папки (Скрыт по умолчанию) -->
                                                 <ItemsPresenter x:Name="NoFolderPresenter" Visibility="Collapsed" />
                                             </StackPanel>
                                             
                                             <ControlTemplate.Triggers>
+                                                <Trigger SourceName="Bd" Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#E0F2FE"/>
+                                                </Trigger>
                                                 <Trigger SourceName="GroupHeaderBtn" Property="IsChecked" Value="False">
                                                     <Setter TargetName="GroupContent" Property="Visibility" Value="Collapsed"/>
+                                                    <Setter TargetName="Bd" Property="CornerRadius" Value="6"/>
+                                                    <Setter TargetName="Bd" Property="Background" Value="#F8FAFC"/>
+                                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#CBD5E1"/>
                                                 </Trigger>
                                                 <DataTrigger Binding="{Binding Name}" Value="">
-                                                    <Setter TargetName="GroupHeaderBtn" Property="Visibility" Value="Collapsed"/>
+                                                    <Setter TargetName="Bd" Property="Visibility" Value="Collapsed"/>
                                                     <Setter TargetName="GroupContent" Property="Visibility" Value="Collapsed"/>
                                                     <Setter TargetName="NoFolderPresenter" Property="Visibility" Value="Visible"/>
                                                 </DataTrigger>
@@ -446,11 +468,11 @@
                         <Setter Property="Background" Value="Transparent"/>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#E0F2FE"/>
+                                <Setter Property="Background" Value="#BAE6FD"/>
                                 <Setter Property="Foreground" Value="#0F172A"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#F8FAFC"/>
+                                <Setter Property="Background" Value="#E2E8F0"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -462,7 +484,7 @@
                         <Setter Property="BorderThickness" Value="0"/>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#E0F2FE"/>
+                                <Setter Property="Background" Value="#BAE6FD"/>
                                 <Setter Property="Foreground" Value="#0F172A"/>
                             </Trigger>
                         </Style.Triggers>
@@ -606,6 +628,12 @@
                         <Button Style="{StaticResource IconButton}" ToolTip="Опустить правило вниз" Click="BtnDown_Click">
                             <TextBlock Text="⬇️" FontFamily="Segoe UI Emoji" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         </Button>
+                    </StackPanel>
+
+                    <!-- Подсказка -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
+                        <TextBlock Text="💡 Подсказка:" FontWeight="SemiBold" Foreground="#64748B" FontSize="12" Margin="0,0,4,0"/>
+                        <TextBlock Text="Выделите правила и нажмите ПКМ, чтобы сгруппировать их в папки" Foreground="#94A3B8" FontSize="12"/>
                     </StackPanel>
 
                 </Grid>

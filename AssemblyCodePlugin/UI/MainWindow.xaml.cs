@@ -818,6 +818,13 @@ namespace AssemblyCodePlugin.UI
             if (MenuMoveToFolder == null) return;
             MenuMoveToFolder.Items.Clear();
 
+            var selected = GridRules.SelectedItems.OfType<RuleRowViewModel>().ToList();
+            if (MenuRemoveFromFolder != null)
+            {
+                // Активно, только если хотя бы один из выделенных элементов находится в папке
+                MenuRemoveFromFolder.IsEnabled = selected.Any(r => !string.IsNullOrEmpty(r.FolderName));
+            }
+
             var folders = _rows.Select(r => r.FolderName).Where(f => !string.IsNullOrWhiteSpace(f)).Distinct().OrderBy(f => f).ToList();
             if (folders.Count == 0)
             {
@@ -850,17 +857,124 @@ namespace AssemblyCodePlugin.UI
             MoveSelectedToFolder("");
         }
 
+        private HashSet<string> _collapsedFolders = new HashSet<string>();
+
+        private void Folder_Checked(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Primitives.ToggleButton tb && tb.DataContext is System.Windows.Data.CollectionViewGroup group)
+            {
+                _collapsedFolders.Remove(group.Name?.ToString() ?? "");
+            }
+        }
+
+        private void Folder_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Primitives.ToggleButton tb && tb.DataContext is System.Windows.Data.CollectionViewGroup group)
+            {
+                _collapsedFolders.Add(group.Name?.ToString() ?? "");
+            }
+        }
+
+        private void Folder_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Primitives.ToggleButton tb && tb.DataContext is System.Windows.Data.CollectionViewGroup group)
+            {
+                string name = group.Name?.ToString() ?? "";
+                if (_collapsedFolders.Contains(name))
+                {
+                    tb.IsChecked = false;
+                }
+            }
+        }
+
         private void MoveSelectedToFolder(string folderName)
         {
             if (GridRules.SelectedItems == null || GridRules.SelectedItems.Count == 0) return;
             var selectedRows = GridRules.SelectedItems.Cast<RuleRowViewModel>().ToList();
-            
+
             foreach (var row in selectedRows)
             {
-                row.FolderName = folderName;
+                row.FolderName = folderName ?? "";
             }
             
+            RebuildRowsOrder(folderName);
             _cvsRules.View.Refresh();
+        }
+
+        private void BtnMoveFolderUp_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true; // предотвращаем сворачивание папки
+            if (sender is FrameworkElement fe && fe.DataContext is System.Windows.Data.CollectionViewGroup group)
+            {
+                MoveFolder(group.Name?.ToString(), -1);
+            }
+        }
+
+        private void BtnMoveFolderDown_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true; // предотвращаем сворачивание папки
+            if (sender is FrameworkElement fe && fe.DataContext is System.Windows.Data.CollectionViewGroup group)
+            {
+                MoveFolder(group.Name?.ToString(), 1);
+            }
+        }
+
+        private void MoveFolder(string folderName, int direction)
+        {
+            if (string.IsNullOrEmpty(folderName)) return;
+
+            var allFolders = _rows.Where(r => !string.IsNullOrEmpty(r.FolderName)).Select(r => r.FolderName).Distinct().ToList();
+            int currentFolderIdx = allFolders.IndexOf(folderName);
+            
+            if (direction == -1 && currentFolderIdx > 0)
+            {
+                allFolders.RemoveAt(currentFolderIdx);
+                allFolders.Insert(currentFolderIdx - 1, folderName);
+            }
+            else if (direction == 1 && currentFolderIdx < allFolders.Count - 1)
+            {
+                allFolders.RemoveAt(currentFolderIdx);
+                allFolders.Insert(currentFolderIdx + 1, folderName);
+            }
+            else
+            {
+                return;
+            }
+            
+            RebuildRowsOrder(null, allFolders);
+            _cvsRules.View.Refresh();
+        }
+
+        private void RebuildRowsOrder(string newFolderToAppend = null, List<string> explicitFolderOrder = null)
+        {
+            List<string> foldersOrder;
+            if (explicitFolderOrder != null)
+            {
+                foldersOrder = explicitFolderOrder;
+            }
+            else
+            {
+                foldersOrder = _rows.Where(r => !string.IsNullOrEmpty(r.FolderName)).Select(r => r.FolderName).Distinct().ToList();
+                if (!string.IsNullOrEmpty(newFolderToAppend) && !foldersOrder.Contains(newFolderToAppend))
+                {
+                    foldersOrder.Add(newFolderToAppend);
+                }
+            }
+
+            var newRows = new List<RuleRowViewModel>();
+            // Добавляем все папки в правильном порядке
+            foreach (var fName in foldersOrder)
+            {
+                newRows.AddRange(_rows.Where(r => r.FolderName == fName));
+            }
+            // Добавляем элементы без папки в самом конце
+            newRows.AddRange(_rows.Where(r => string.IsNullOrEmpty(r.FolderName)));
+
+            _rows.Clear();
+            foreach (var r in newRows)
+            {
+                _rows.Add(r);
+            }
         }
 
         // ─── Сохранение и запуск ──────────────────────────────────────────────────
