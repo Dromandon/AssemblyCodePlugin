@@ -733,9 +733,10 @@ namespace AssemblyCodePlugin.UI
             {
                 int idx = _rows.IndexOf(row);
                 var copyRule = row.Rule.Clone();
-                var copyRow = new RuleRowViewModel(copyRule);
+                var copyRow = new RuleRowViewModel(copyRule) { FolderName = row.FolderName };
                 _rows.Insert(idx + 1, copyRow);
                 GridRules.SelectedItem = copyRow;
+                GridRules.ScrollIntoView(copyRow);
                 UpdateMatchesForRow(copyRow);
             }
         }
@@ -785,7 +786,8 @@ namespace AssemblyCodePlugin.UI
                 if (_rows.Count > 0)
                 {
                     int nextIdx = Math.Min(idx, _rows.Count - 1);
-                    GridRules.SelectedIndex = nextIdx;
+                    GridRules.SelectedItem = _rows[nextIdx];
+                    GridRules.ScrollIntoView(_rows[nextIdx]);
                     GridRules.Focus();
                 }
             }
@@ -793,22 +795,40 @@ namespace AssemblyCodePlugin.UI
 
         private void BtnUp_Click(object sender, RoutedEventArgs e)
         {
-            int idx = GridRules.SelectedIndex;
-            if (idx <= 0) return;
-            var item = _rows[idx];
-            _rows.RemoveAt(idx);
-            _rows.Insert(idx - 1, item);
-            GridRules.SelectedIndex = idx - 1;
+            if (GridRules.SelectedItem is RuleRowViewModel item)
+            {
+                int idx = _rows.IndexOf(item);
+                if (idx > 0)
+                {
+                    var prevItem = _rows[idx - 1];
+                    if (prevItem.FolderName == item.FolderName)
+                    {
+                        _rows.RemoveAt(idx);
+                        _rows.Insert(idx - 1, item);
+                        GridRules.SelectedItem = item;
+                        GridRules.ScrollIntoView(item);
+                    }
+                }
+            }
         }
 
         private void BtnDown_Click(object sender, RoutedEventArgs e)
         {
-            int idx = GridRules.SelectedIndex;
-            if (idx < 0 || idx >= _rows.Count - 1) return;
-            var item = _rows[idx];
-            _rows.RemoveAt(idx);
-            _rows.Insert(idx + 1, item);
-            GridRules.SelectedIndex = idx + 1;
+            if (GridRules.SelectedItem is RuleRowViewModel item)
+            {
+                int idx = _rows.IndexOf(item);
+                if (idx >= 0 && idx < _rows.Count - 1)
+                {
+                    var nextItem = _rows[idx + 1];
+                    if (nextItem.FolderName == item.FolderName)
+                    {
+                        _rows.RemoveAt(idx);
+                        _rows.Insert(idx + 1, item);
+                        GridRules.SelectedItem = item;
+                        GridRules.ScrollIntoView(item);
+                    }
+                }
+            }
         }
 
         // ─── Контекстное меню папок ───────────────────────────────────────────────
