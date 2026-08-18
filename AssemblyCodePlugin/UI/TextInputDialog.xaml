@@ -1,7 +1,7 @@
 <Window x:Class="AssemblyCodePlugin.UI.TextInputDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Имя папки" Height="160" Width="320"
+        Title="Имя папки" Height="180" Width="320"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         Background="#F8FAFC" FontFamily="Segoe UI" ShowInTaskbar="False">
     <Window.Resources>

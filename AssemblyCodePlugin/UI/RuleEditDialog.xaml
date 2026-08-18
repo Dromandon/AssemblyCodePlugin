@@ -267,7 +267,7 @@
                                     <TextBlock DockPanel.Dock="Top" Text="Условия отбора элементов (можно использовать вложенные группы И / ИЛИ):" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,10"/>
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <!-- Сюда в Code-Behind будет динамически добавлен корневой FilterNodeControl -->
-                                        <ContentControl x:Name="RootFilterContainer" />
+                                        <ContentControl x:Name="RootFilterContainer" Margin="0,0,12,0" />
                                     </ScrollViewer>
                                 </DockPanel>
                             </Border>
@@ -299,7 +299,7 @@
             <TabItem Header="Код для надземной части">
                 <Border Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,6,0,0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
+                        <StackPanel Margin="0,0,12,0">
                             <!-- Кнопки копирования и справки над всеми настройками вкладки -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,14">
                                 <Button x:Name="BtnCopyAboveToBelow"
@@ -508,7 +508,7 @@
             <TabItem x:Name="TabBelowGround" Header="Код для подземной части">
                 <Border Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,6,0,0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
+                        <StackPanel Margin="0,0,12,0">
                             <!-- Кнопки копирования и справки над всеми настройками вкладки -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,14">
                                 <Button x:Name="BtnCopyBelowToAbove"
