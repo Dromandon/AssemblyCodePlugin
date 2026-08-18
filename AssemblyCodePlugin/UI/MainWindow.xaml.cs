@@ -753,7 +753,7 @@ namespace AssemblyCodePlugin.UI
                 int idx = _rows.IndexOf(row);
                 if (idx >= 0)
                 {
-                    var updatedRow = new RuleRowViewModel(dlg.Result);
+                    var updatedRow = new RuleRowViewModel(dlg.Result) { FolderName = row.FolderName };
                     _rows[idx] = updatedRow;
                     UpdateMatchesForRow(updatedRow);
                 }
