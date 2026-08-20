@@ -95,9 +95,12 @@ namespace AssemblyCodePlugin.UI
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(IsAboveMatchNotFound));
                     OnPropertyChanged(nameof(SelectedAbovePath));
+                    OnPropertyChanged(nameof(IsAboveWarning));
                 }
             }
         }
+
+        public bool IsAboveWarning => SelectedAboveMatch != null && SelectedAboveMatch.Contains("⚠️") && !IsAboveMatchNotFound;
 
         private string _selectedBelowMatch;
         public string SelectedBelowMatch
@@ -112,9 +115,12 @@ namespace AssemblyCodePlugin.UI
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(IsBelowMatchNotFound));
                     OnPropertyChanged(nameof(SelectedBelowPath));
+                    OnPropertyChanged(nameof(IsBelowWarning));
                 }
             }
         }
+
+        public bool IsBelowWarning => SelectedBelowMatch != null && SelectedBelowMatch.Contains("⚠️") && !IsBelowMatchNotFound;
 
         public string SelectedAbovePath =>
             (_selectedAboveMatch != null && _pathToCodeMap.TryGetValue(_selectedAboveMatch, out var p) && !string.IsNullOrEmpty(p))
@@ -138,7 +144,7 @@ namespace AssemblyCodePlugin.UI
                 foreach (var item in allClassifierItems)
                 {
                     if (item == null || string.IsNullOrEmpty(item.Code)) continue;
-                    string str = $"{item.Code} — {item.Description}";
+                    string str = item.HasChildren ? $"⚠️ {item.Code} — {item.Description}" : $"{item.Code} — {item.Description}";
                     _pathToCodeMap[str] = item.CategoryPath ?? "";
                 }
             }
@@ -157,7 +163,7 @@ namespace AssemblyCodePlugin.UI
                 {
                     foreach (var item in above)
                     {
-                        string str = $"{item.Code} — {item.Description}";
+                        string str = item.HasChildren ? $"⚠️ {item.Code} — {item.Description}" : $"{item.Code} — {item.Description}";
                         _pathToCodeMap[str] = item.CategoryPath ?? "";
                         AboveMatches.Add(str);
                         aboveAdded.Add(item.Code);
@@ -179,7 +185,8 @@ namespace AssemblyCodePlugin.UI
                         if (item == null || string.IsNullOrEmpty(item.Code)) continue;
                         if (!aboveAdded.Contains(item.Code))
                         {
-                            AboveMatches.Add($"{item.Code} — {item.Description}");
+                            string str = item.HasChildren ? $"⚠️ {item.Code} — {item.Description}" : $"{item.Code} — {item.Description}";
+                            AboveMatches.Add(str);
                         }
                     }
                 }
@@ -212,7 +219,7 @@ namespace AssemblyCodePlugin.UI
                 {
                     foreach (var item in below)
                     {
-                        string str = $"{item.Code} — {item.Description}";
+                        string str = item.HasChildren ? $"⚠️ {item.Code} — {item.Description}" : $"{item.Code} — {item.Description}";
                         _pathToCodeMap[str] = item.CategoryPath ?? "";
                         BelowMatches.Add(str);
                         belowAdded.Add(item.Code);
@@ -234,7 +241,8 @@ namespace AssemblyCodePlugin.UI
                         if (item == null || string.IsNullOrEmpty(item.Code)) continue;
                         if (!belowAdded.Contains(item.Code))
                         {
-                            BelowMatches.Add($"{item.Code} — {item.Description}");
+                            string str = item.HasChildren ? $"⚠️ {item.Code} — {item.Description}" : $"{item.Code} — {item.Description}";
+                            BelowMatches.Add(str);
                         }
                     }
                 }
@@ -273,6 +281,7 @@ namespace AssemblyCodePlugin.UI
         private System.Windows.Data.CollectionViewSource _cvsRules;
         private bool _runRequested = false;
         private List<ParamInfo> _availableParams = new List<ParamInfo>();
+        private bool _hasDeepClassifier = false;
 
         public bool RunRequested => _runRequested;
         public PluginSettings ResultSettings => _settings;
@@ -314,6 +323,18 @@ namespace AssemblyCodePlugin.UI
             LoadSettingsToUi(settings);
             RefreshConfigsList();
 
+            // Проверяем классификатор на глубокие уровни (Level > 5)
+            try
+            {
+                var (classifierItems, _) = AssemblyCodeTableReader.ReadClassifier(_doc);
+                if (classifierItems != null)
+                {
+                    _hasDeepClassifier = classifierItems.Any(x => x.Level > 5);
+                }
+            }
+            catch { }
+            UpdateDescParamVisibility();
+
             Loaded += (s, e) =>
             {
                 UpdateAllMatchesInUi();
@@ -341,6 +362,16 @@ namespace AssemblyCodePlugin.UI
             finally
             {
                 _isSuppressingConfigChanged = false;
+            }
+        }
+
+        private void CheckDeepClassifierWarning(bool isAssemblyCodeParam)
+        {
+            if (WarningDeepClassifierBorder != null)
+            {
+                WarningDeepClassifierBorder.Visibility = (_hasDeepClassifier && isAssemblyCodeParam) 
+                    ? System.Windows.Visibility.Visible 
+                    : System.Windows.Visibility.Collapsed;
             }
         }
 
@@ -596,6 +627,8 @@ namespace AssemblyCodePlugin.UI
                                 string.Equals(codeParam, "Код по классификатору", StringComparison.OrdinalIgnoreCase);
 
             PanelAssemblyDescParam.Visibility = isSystemCode ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+            
+            CheckDeepClassifierWarning(isSystemCode);
         }
 
         private void BtnConfigureUndergroundId_Click(object sender, RoutedEventArgs e)

@@ -71,6 +71,7 @@ namespace AssemblyCodePlugin.UI
                     _selectedAbovePreviewMatch = value;
                     OnPropertyChanged(nameof(SelectedAbovePreviewMatch));
                     OnPropertyChanged(nameof(SelectedAbovePreviewPath));
+                    OnPropertyChanged(nameof(IsAboveWarning));
                 }
             }
         }
@@ -78,6 +79,8 @@ namespace AssemblyCodePlugin.UI
         public string SelectedAbovePreviewPath =>
             (_selectedAbovePreviewMatch != null && _previewPathToCodeMap.TryGetValue(_selectedAbovePreviewMatch, out var p) && !string.IsNullOrEmpty(p))
             ? $"📁 {p}" : "";
+
+        public bool IsAboveWarning => _selectedAbovePreviewMatch != null && _selectedAbovePreviewMatch.Contains("⚠️");
 
         public ObservableCollection<string> BelowPreviewMatches { get; } = new ObservableCollection<string>();
 
@@ -92,6 +95,7 @@ namespace AssemblyCodePlugin.UI
                     _selectedBelowPreviewMatch = value;
                     OnPropertyChanged(nameof(SelectedBelowPreviewMatch));
                     OnPropertyChanged(nameof(SelectedBelowPreviewPath));
+                    OnPropertyChanged(nameof(IsBelowWarning));
                 }
             }
         }
@@ -99,6 +103,8 @@ namespace AssemblyCodePlugin.UI
         public string SelectedBelowPreviewPath =>
             (_selectedBelowPreviewMatch != null && _previewPathToCodeMap.TryGetValue(_selectedBelowPreviewMatch, out var p) && !string.IsNullOrEmpty(p))
             ? $"📁 {p}" : "";
+
+        public bool IsBelowWarning => _selectedBelowPreviewMatch != null && _selectedBelowPreviewMatch.Contains("⚠️");
 
         public CategoryItem[] Categories { get; private set; }
         private ICollectionView _categoryView;

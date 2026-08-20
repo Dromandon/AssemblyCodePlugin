@@ -495,6 +495,19 @@
                                                       SelectedItem="{Binding SelectedAbovePreviewMatch, UpdateSourceTrigger=PropertyChanged}"
                                                       HorizontalAlignment="Stretch"
                                                       HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
+                                            <TextBlock Text="⚠️ ВНИМАНИЕ: выбранный код имеет дочерние (вложенные) уровни! Настоятельно рекомендуется добавить бонусные баллы за уточняющие слова, чтобы выбрать более точное (конечное) значение классификатора." 
+                                                       Foreground="{StaticResource ApexRed}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="2,8,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsAboveWarning}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
@@ -704,6 +717,19 @@
                                                       SelectedItem="{Binding SelectedBelowPreviewMatch, UpdateSourceTrigger=PropertyChanged}"
                                                       HorizontalAlignment="Stretch"
                                                       HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
+                                            <TextBlock Text="⚠️ ВНИМАНИЕ: выбранный код имеет дочерние (вложенные) уровни! Настоятельно рекомендуется добавить бонусные баллы за уточняющие слова, чтобы выбрать более точное (конечное) значение классификатора." 
+                                                       Foreground="{StaticResource ApexRed}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="2,8,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsBelowWarning}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
