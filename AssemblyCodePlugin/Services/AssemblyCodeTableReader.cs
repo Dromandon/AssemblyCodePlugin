@@ -12,6 +12,7 @@ namespace AssemblyCodePlugin.Services
         public string Description { get; set; } = "";
         public string ParentCode { get; set; } = "";
         public string CategoryPath { get; set; } = "";
+        public bool HasChildren { get; set; } = false;
     }
 
     public static class AssemblyCodeTableReader
@@ -80,6 +81,28 @@ namespace AssemblyCodePlugin.Services
                 foreach (var item in items)
                 {
                     item.CategoryPath = BuildPath(item, byCode, items);
+                }
+
+                // Вычисляем HasChildren
+                foreach (var child in items)
+                {
+                    if (!string.IsNullOrEmpty(child.ParentCode) && byCode.TryGetValue(child.ParentCode, out var explicitParent))
+                    {
+                        explicitParent.HasChildren = true;
+                    }
+                    else
+                    {
+                        // Ищем родителя по иерархии кода (префикс)
+                        int lastDot = child.Code.LastIndexOf('.');
+                        if (lastDot > 0)
+                        {
+                            string parentCode = child.Code.Substring(0, lastDot);
+                            if (byCode.TryGetValue(parentCode, out var implicitParent))
+                            {
+                                implicitParent.HasChildren = true;
+                            }
+                        }
+                    }
                 }
             }
 

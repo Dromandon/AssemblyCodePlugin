@@ -499,7 +499,7 @@ namespace AssemblyCodePlugin.UI
                 foreach (var item in classifierItems)
                 {
                     if (item == null || string.IsNullOrEmpty(item.Code)) continue;
-                    string str = $"{item.Code} — {item.Description}";
+                    string str = item.HasChildren ? $"⚠️ {item.Code} — {item.Description}" : $"{item.Code} — {item.Description}";
                     _previewPathToCodeMap[str] = item.CategoryPath ?? "";
                 }
 
@@ -528,7 +528,8 @@ namespace AssemblyCodePlugin.UI
                 {
                     foreach (var m in matches)
                     {
-                        targetCollection.Add($"{m.Code} — {m.Description}");
+                        string str = m.HasChildren ? $"⚠️ {m.Code} — {m.Description}" : $"{m.Code} — {m.Description}";
+                        targetCollection.Add(str);
                     }
                     if (isUnderground)
                         SelectedBelowPreviewMatch = targetCollection.First();

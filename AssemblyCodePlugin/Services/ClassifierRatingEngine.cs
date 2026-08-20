@@ -38,7 +38,9 @@ namespace AssemblyCodePlugin.Services
 
             foreach (var item in items)
             {
-                string desc = item.Description ?? "";
+                string desc = string.IsNullOrEmpty(item.CategoryPath) 
+                    ? (item.Description ?? "") 
+                    : (item.CategoryPath + " " + (item.Description ?? ""));
 
                 // bool1: anyTrue
                 bool bool1 = rule.AnyTrue == null || rule.AnyTrue.Count == 0 ||
@@ -91,10 +93,10 @@ namespace AssemblyCodePlugin.Services
             if (!isUnderground)
             {
                 var hierarchyResult = FilterAllByParentSection(bestMatches, itemsByCode, wantUnderground: false);
-                if (hierarchyResult.Count > 0) return hierarchyResult;
+                if (hierarchyResult.Count > 0) return hierarchyResult.OrderBy(x => x.Code?.Length ?? 0).ThenBy(x => x.Code).ToList();
             }
 
-            return bestMatches;
+            return bestMatches.OrderBy(x => x.Code?.Length ?? 0).ThenBy(x => x.Code).ToList();
         }
 
         /// <summary>
@@ -116,7 +118,9 @@ namespace AssemblyCodePlugin.Services
             for (int i = 0; i < items.Count; i++)
             {
                 var item = items[i];
-                string desc = item.Description ?? "";
+                string desc = string.IsNullOrEmpty(item.CategoryPath) 
+                    ? (item.Description ?? "") 
+                    : (item.CategoryPath + " " + (item.Description ?? ""));
 
                 // bool1: anyTrue
                 bool bool1 = rule.AnyTrue == null || rule.AnyTrue.Count == 0 ||
@@ -156,7 +160,8 @@ namespace AssemblyCodePlugin.Services
 
             return scored
                 .OrderByDescending(x => x.Rating)
-                .ThenBy(x => x.Index)
+                .ThenBy(x => x.Item.Code?.Length ?? 0)
+                .ThenBy(x => x.Item.Code)
                 .Select(x => x.Item)
                 .ToList();
         }
