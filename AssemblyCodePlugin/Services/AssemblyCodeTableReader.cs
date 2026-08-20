@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Autodesk.Revit.DB;
 
@@ -84,24 +85,20 @@ namespace AssemblyCodePlugin.Services
                 }
 
                 // Вычисляем HasChildren
-                foreach (var child in items)
+                foreach (var item in items)
                 {
-                    if (!string.IsNullOrEmpty(child.ParentCode) && byCode.TryGetValue(child.ParentCode, out var explicitParent))
+                    // Проверяем явных детей
+                    if (items.Any(child => !string.IsNullOrEmpty(child.ParentCode) && child.ParentCode.Equals(item.Code, StringComparison.OrdinalIgnoreCase)))
                     {
-                        explicitParent.HasChildren = true;
+                        item.HasChildren = true;
+                        continue;
                     }
-                    else
+
+                    // Проверяем неявных детей (по префиксу кода)
+                    // У дочернего кода код длиннее и он начинается с кода родителя
+                    if (items.Any(child => child.Code.Length > item.Code.Length && child.Code.StartsWith(item.Code, StringComparison.OrdinalIgnoreCase)))
                     {
-                        // Ищем родителя по иерархии кода (префикс)
-                        int lastDot = child.Code.LastIndexOf('.');
-                        if (lastDot > 0)
-                        {
-                            string parentCode = child.Code.Substring(0, lastDot);
-                            if (byCode.TryGetValue(parentCode, out var implicitParent))
-                            {
-                                implicitParent.HasChildren = true;
-                            }
-                        }
+                        item.HasChildren = true;
                     }
                 }
             }
