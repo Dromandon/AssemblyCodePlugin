@@ -326,11 +326,8 @@ namespace AssemblyCodePlugin.UI
             // Проверяем классификатор на глубокие уровни (Level > 5)
             try
             {
-                var (classifierItems, _) = AssemblyCodeTableReader.ReadClassifier(_doc);
-                if (classifierItems != null)
-                {
-                    _hasDeepClassifier = classifierItems.Any(x => x.Level > 5);
-                }
+                var (_, _, hasDeep) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _settings.IgnoreDeepClassifiers);
+                _hasDeepClassifier = hasDeep;
             }
             catch { }
             UpdateDescParamVisibility();
@@ -529,7 +526,7 @@ namespace AssemblyCodePlugin.UI
                     _settings.LastClassifierFileName = currentClassifierFile;
                 }
 
-                var (classifierItems, byCode) = AssemblyCodeTableReader.ReadClassifier(_doc);
+                var (classifierItems, byCode, _) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _settings.IgnoreDeepClassifiers);
                 if (classifierItems != null && classifierItems.Count > 0)
                 {
                     TxtStatus.Text = $"Классификатор подключен ({classifierItems.Count} позиций). Готов к работе.";
@@ -587,7 +584,17 @@ namespace AssemblyCodePlugin.UI
             UpdateDescParamVisibility();
 
             if (ChkDisableZoneSplit != null) ChkDisableZoneSplit.IsChecked = s.DisableZoneSplit;
+            if (ChkIgnoreDeepClassifiers != null) ChkIgnoreDeepClassifiers.IsChecked = s.IgnoreDeepClassifiers;
             UpdateZoneSplitVisibility();
+        }
+
+        private void ChkIgnoreDeepClassifiers_Click(object sender, RoutedEventArgs e)
+        {
+            if (ChkIgnoreDeepClassifiers.IsChecked.HasValue)
+            {
+                _settings.IgnoreDeepClassifiers = ChkIgnoreDeepClassifiers.IsChecked.Value;
+                UpdateAllMatchesInUi();
+            }
         }
 
         private void ChkDisableZoneSplit_Click(object sender, RoutedEventArgs e)
@@ -708,7 +715,7 @@ namespace AssemblyCodePlugin.UI
         {
             try
             {
-                var (classifierItems, byCode) = AssemblyCodeTableReader.ReadClassifier(_doc);
+                var (classifierItems, byCode, _) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _settings.IgnoreDeepClassifiers);
                 if (classifierItems != null && classifierItems.Count > 0)
                 {
                     var aboveCandidates = ClassifierRatingEngine.FindPositiveMatches(
@@ -751,7 +758,7 @@ namespace AssemblyCodePlugin.UI
         private void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
             var newRule = new ClassificationRule { ElementTypeName = "Новый тип" };
-            var dlg = new RuleEditDialog(newRule, _doc, _settings.DisableZoneSplit) { Owner = this };
+            var dlg = new RuleEditDialog(newRule, _doc, _settings.DisableZoneSplit, _settings.IgnoreDeepClassifiers) { Owner = this };
             if (ConfigureAndShowRuleEditDialog(dlg) == true)
             {
                 var row = new RuleRowViewModel(dlg.Result);
@@ -780,7 +787,7 @@ namespace AssemblyCodePlugin.UI
         private void EditSelected()
         {
             if (GridRules.SelectedItem is not RuleRowViewModel row) return;
-            var dlg = new RuleEditDialog(row.Rule, _doc, _settings.DisableZoneSplit) { Owner = this };
+            var dlg = new RuleEditDialog(row.Rule, _doc, _settings.DisableZoneSplit, _settings.IgnoreDeepClassifiers) { Owner = this };
             if (ConfigureAndShowRuleEditDialog(dlg) == true)
             {
                 int idx = _rows.IndexOf(row);
@@ -1142,5 +1149,48 @@ namespace AssemblyCodePlugin.UI
 
         private static double TryParseDouble(string text) =>
             double.TryParse(text?.Trim(), out double val) ? val : 0;
+
+        private void BtnOpenTree_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is RuleRowViewModel rowVm)
+            {
+                var (allItems, _, _) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _settings.IgnoreDeepClassifiers);
+                if (allItems == null || allItems.Count == 0)
+                {
+                    MessageBox.Show("Не удалось прочитать классификатор.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                bool isAbove = btn.Tag as string == "Above";
+                
+                // Берем только рекомендованные, отсекая всё, что после разделителя
+                var sourceList = isAbove ? rowVm.AboveMatches : rowVm.BelowMatches;
+                List<string> recommended = new List<string>();
+                foreach (var match in sourceList)
+                {
+                    if (match.StartsWith("───")) break;
+                    recommended.Add(match);
+                }
+
+                var dlg = new ClassifierTreeDialog(allItems.ToList(), recommended) { Owner = this };
+                if (dlg.ShowDialog() == true && dlg.SelectedItem != null)
+                {
+                    string newVal = dlg.SelectedItem.HasChildren ? $"⚠️ {dlg.SelectedItem.Code} — {dlg.SelectedItem.Description}" : $"{dlg.SelectedItem.Code} — {dlg.SelectedItem.Description}";
+                    
+                    if (isAbove)
+                    {
+                        if (!rowVm.AboveMatches.Contains(newVal))
+                            rowVm.AboveMatches.Insert(0, newVal);
+                        rowVm.SelectedAboveMatch = newVal;
+                    }
+                    else
+                    {
+                        if (!rowVm.BelowMatches.Contains(newVal))
+                            rowVm.BelowMatches.Insert(0, newVal);
+                        rowVm.SelectedBelowMatch = newVal;
+                    }
+                }
+            }
+        }
     }
 }

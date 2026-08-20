@@ -38,8 +38,9 @@ namespace AssemblyCodePlugin.Services
         }
 
         public static (IReadOnlyList<AssemblyCodeItem> items,
-                        IReadOnlyDictionary<string, AssemblyCodeItem> byCode)
-            ReadClassifier(Document doc, string customPath = null)
+                        IReadOnlyDictionary<string, AssemblyCodeItem> byCode,
+                        bool hasDeepClassifier)
+            ReadClassifier(Document doc, string customPath = null, bool ignoreDeep = false)
         {
             string filePath = customPath;
 
@@ -145,7 +146,15 @@ namespace AssemblyCodePlugin.Services
                 }
             }
 
-            return (items, byCode);
+            bool hasDeepClassifier = items.Any(x => x.Level > 5);
+            
+            if (ignoreDeep)
+            {
+                items.RemoveAll(x => x.Level > 5);
+                byCode = items.ToDictionary(x => x.Code, StringComparer.OrdinalIgnoreCase);
+            }
+
+            return (items, byCode, hasDeepClassifier);
         }
 
         private static string BuildPath(AssemblyCodeItem item,

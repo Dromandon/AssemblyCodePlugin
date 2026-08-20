@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -10,35 +9,24 @@
     <DebugSymbols>false</DebugSymbols>
     <DebugType>none</DebugType>
   </PropertyGroup>
-
   <ItemGroup>
     <Reference Include="System.Runtime.Serialization" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2022.0.0" ExcludeAssets="runtime" />
   </ItemGroup>
-
   <ItemGroup>
     <None Update="AssemblyCodePlugin.addin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <EmbeddedResource Include="Resources\DefaultConfig.json" />
   </ItemGroup>
-
   <Target Name="PostBuildCopyToAddins" AfterTargets="PostBuildEvent">
     <MakeDir Directories="C:\ProgramData\Autodesk\Revit\Addins\2022" />
-    <Copy SourceFiles="$(TargetDir)AssemblyCodePlugin.dll;$(TargetDir)AssemblyCodePlugin.addin"
-          DestinationFolder="C:\ProgramData\Autodesk\Revit\Addins\2022"
-          ContinueOnError="true" />
+    <Copy SourceFiles="$(TargetDir)AssemblyCodePlugin.dll;$(TargetDir)AssemblyCodePlugin.addin" DestinationFolder="C:\ProgramData\Autodesk\Revit\Addins\2022" ContinueOnError="true" />
     <MakeDir Directories="$(AppData)\Autodesk\Revit\Addins\2022" />
-    <Copy SourceFiles="$(TargetDir)AssemblyCodePlugin.dll;$(TargetDir)AssemblyCodePlugin.addin"
-          DestinationFolder="$(AppData)\Autodesk\Revit\Addins\2022"
-          ContinueOnError="true" />
-    <MakeDir Directories="C:\Users\Dromandon\Desktop\Рабочие плагины\AssemblyCode\Готовый_Плагин_Revit2022" />
-    <Copy SourceFiles="$(TargetDir)AssemblyCodePlugin.dll;$(TargetDir)AssemblyCodePlugin.addin"
-          DestinationFolder="C:\Users\Dromandon\Desktop\Рабочие плагины\AssemblyCode\Готовый_Плагин_Revit2022"
-          ContinueOnError="true" />
+    <Copy SourceFiles="$(TargetDir)AssemblyCodePlugin.dll;$(TargetDir)AssemblyCodePlugin.addin" DestinationFolder="$(AppData)\Autodesk\Revit\Addins\2022" ContinueOnError="true" />
+    <MakeDir Directories="C:\Users\Dromandon\Desktop\Р Р°Р±РѕС‡РёРµ РїР»Р°РіРёРЅС‹\AssemblyCode\Р“РѕС‚РѕРІС‹Р№_РџР»Р°РіРёРЅ_Revit2022" />
+    <Copy SourceFiles="$(TargetDir)AssemblyCodePlugin.dll;$(TargetDir)AssemblyCodePlugin.addin" DestinationFolder="C:\Users\Dromandon\Desktop\Р Р°Р±РѕС‡РёРµ РїР»Р°РіРёРЅС‹\AssemblyCode\Р“РѕС‚РѕРІС‹Р№_РџР»Р°РіРёРЅ_Revit2022" ContinueOnError="true" />
   </Target>
-
 </Project>

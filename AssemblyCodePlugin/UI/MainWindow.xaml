@@ -255,12 +255,15 @@
 
         <!-- Предупреждение о глубоком классификаторе -->
         <Border x:Name="WarningDeepClassifierBorder" Grid.Row="0" Background="#FFFBEB" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12" Visibility="Collapsed">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="⚠️ Внимание:" FontWeight="Bold" Foreground="#B45309" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                <TextBlock Foreground="#92400E" TextWrapping="Wrap" VerticalAlignment="Center">
-                    Файл классификатора имеет более 5 уровней вложенности. Системный параметр Revit «Assembly Code» («Код по классификатору») не поддерживает глубину выше 5.<LineBreak/>
-                    Коды могут не отображаться. Рекомендуется выбрать другой текстовый параметр, либо согласовать структуру с заказчиком.
-                </TextBlock>
+            <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="⚠️ Внимание:" FontWeight="Bold" Foreground="#B45309" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Foreground="#92400E" TextWrapping="Wrap" VerticalAlignment="Center">
+                        Файл классификатора имеет более 5 уровней вложенности. Системный параметр Revit «Assembly Code» («Код по классификатору») не поддерживает глубину выше 5.<LineBreak/>
+                        Рекомендуется выбрать другой текстовый параметр, либо согласовать структуру с заказчиком.
+                    </TextBlock>
+                </StackPanel>
+                <CheckBox x:Name="ChkIgnoreDeepClassifiers" Style="{StaticResource ToggleSwitchStyle}" Content="Не учитывать коды ниже 5-го уровня вложенности (обрезать структуру)" Margin="0,8,0,0" Foreground="#92400E" Click="ChkIgnoreDeepClassifiers_Click"/>
             </StackPanel>
         </Border>
 
@@ -524,13 +527,29 @@
                                                    TextTrimming="CharacterEllipsis"
                                                    HorizontalAlignment="Left"
                                                    Margin="2,0,0,2"/>
-                                        <ComboBox x:Name="Combo"
-                                                  Height="26"
-                                                  ItemsSource="{Binding AboveMatches}" SelectedItem="{Binding SelectedAboveMatch, UpdateSourceTrigger=PropertyChanged}"
-                                                  IsEnabled="{Binding IsAboveActive}"
-                                                  BorderThickness="0" Background="Transparent"
-                                                  HorizontalAlignment="Stretch"
-                                                  HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox x:Name="Combo"
+                                                      Grid.Column="0"
+                                                      Height="26"
+                                                      ItemsSource="{Binding AboveMatches}" SelectedItem="{Binding SelectedAboveMatch, UpdateSourceTrigger=PropertyChanged}"
+                                                      IsEnabled="{Binding IsAboveActive}"
+                                                      BorderThickness="0" Background="Transparent"
+                                                      HorizontalAlignment="Stretch"
+                                                      HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="📁" Width="24" Height="24" Margin="4,0,0,0" 
+                                                    Background="Transparent" BorderBrush="{StaticResource BorderColor}" BorderThickness="1"
+                                                    ToolTip="Выбрать код из дерева" IsEnabled="{Binding IsAboveActive}" Tag="Above" Click="BtnOpenTree_Click">
+                                                <Button.Resources>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="CornerRadius" Value="4"/>
+                                                    </Style>
+                                                </Button.Resources>
+                                            </Button>
+                                        </Grid>
                                     </StackPanel>
                                 </Border>
                                 <DataTemplate.Triggers>
@@ -566,13 +585,29 @@
                                                    TextTrimming="CharacterEllipsis"
                                                    HorizontalAlignment="Left"
                                                    Margin="2,0,0,2"/>
-                                        <ComboBox x:Name="Combo"
-                                                  Height="26"
-                                                  ItemsSource="{Binding BelowMatches}" SelectedItem="{Binding SelectedBelowMatch, UpdateSourceTrigger=PropertyChanged}"
-                                                  IsEnabled="{Binding IsBelowActive}"
-                                                  BorderThickness="0" Background="Transparent"
-                                                  HorizontalAlignment="Stretch"
-                                                  HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox x:Name="Combo"
+                                                      Grid.Column="0"
+                                                      Height="26"
+                                                      ItemsSource="{Binding BelowMatches}" SelectedItem="{Binding SelectedBelowMatch, UpdateSourceTrigger=PropertyChanged}"
+                                                      IsEnabled="{Binding IsBelowActive}"
+                                                      BorderThickness="0" Background="Transparent"
+                                                      HorizontalAlignment="Stretch"
+                                                      HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="📁" Width="24" Height="24" Margin="4,0,0,0" 
+                                                    Background="Transparent" BorderBrush="{StaticResource BorderColor}" BorderThickness="1"
+                                                    ToolTip="Выбрать код из дерева" IsEnabled="{Binding IsBelowActive}" Tag="Below" Click="BtnOpenTree_Click">
+                                                <Button.Resources>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="CornerRadius" Value="4"/>
+                                                    </Style>
+                                                </Button.Resources>
+                                            </Button>
+                                        </Grid>
                                     </StackPanel>
                                 </Border>
                                 <DataTemplate.Triggers>

@@ -42,7 +42,7 @@ namespace AssemblyCodePlugin.Services
 
             // 1. Загружаем классификатор
             PluginLogger.Log("1. Чтение таблицы классификатора...");
-            var (classifierItems, byCode) = AssemblyCodeTableReader.ReadClassifier(doc);
+            var (classifierItems, byCode, _) = AssemblyCodeTableReader.ReadClassifier(doc, null, settings.IgnoreDeepClassifiers);
             if (classifierItems.Count == 0)
                 PluginLogger.Log("   -> ⚠️ ВНИМАНИЕ: Файл классификатора не найден или пуст! Пожалуйста, подключите файл классификатора в настройках Revit (Управление -> Дополнительные параметры -> Код по классификатору).");
             else

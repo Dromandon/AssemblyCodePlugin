@@ -168,8 +168,11 @@ namespace AssemblyCodePlugin.UI
             }
         }
 
-        public RuleEditDialog(ClassificationRule rule, Document doc = null, bool disableZoneSplit = false)
+        private readonly bool _ignoreDeepClassifiers;
+        
+        public RuleEditDialog(ClassificationRule rule, Document doc = null, bool disableZoneSplit = false, bool ignoreDeepClassifiers = false)
         {
+            _ignoreDeepClassifiers = ignoreDeepClassifiers;
             InitializeComponent();
             _source = rule;
             _doc = doc;
@@ -494,7 +497,7 @@ namespace AssemblyCodePlugin.UI
 
             try
             {
-                var (classifierItems, byCode) = AssemblyCodeTableReader.ReadClassifier(_doc);
+                var (classifierItems, byCode, _) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _ignoreDeepClassifiers);
                 if (classifierItems == null || classifierItems.Count == 0)
                 {
                     MessageBox.Show("Файл классификатора Assembly Code не задан или пуст в документе Revit.", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);

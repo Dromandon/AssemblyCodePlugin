@@ -18,6 +18,9 @@ namespace AssemblyCodePlugin.Models
         // Отключить разделение на надземную и подземную части
         public bool DisableZoneSplit { get; set; } = false;
 
+        // Игнорировать уровни классификатора > 5 (совместимость с Revit Assembly Code)
+        public bool IgnoreDeepClassifiers { get; set; } = false;
+
         // Настройки нулевого уровня
         public ZeroLevelSettings ZeroLevel { get; set; } = new ZeroLevelSettings();
 
