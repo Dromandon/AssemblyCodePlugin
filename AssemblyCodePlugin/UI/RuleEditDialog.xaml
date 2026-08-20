@@ -276,7 +276,10 @@
                             <Border Grid.Row="8" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14">
                                 <StackPanel Orientation="Vertical">
                                     <CheckBox x:Name="ChkAppendTypeSuffix" Style="{StaticResource ToggleSwitchStyle}" VerticalAlignment="Center" Click="ChkAppendTypeSuffix_Click">
-                                        <TextBlock Text="Добавлять суффикс к имени типа при классификации (создание отдельного типа при необходимости)" FontWeight="SemiBold" Foreground="#1E293B"/>
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock Text="Добавлять суффикс к имени типа при классификации (создание отдельного типа при необходимости)" FontWeight="SemiBold" Foreground="#1E293B"/>
+                                            <TextBlock Text="* Применяется только если системный параметр классификатора является параметром типа" FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
+                                        </StackPanel>
                                     </CheckBox>
                                     <Grid x:Name="PanelTypeSuffix" Margin="48,8,0,0">
                                         <Grid.ColumnDefinitions>

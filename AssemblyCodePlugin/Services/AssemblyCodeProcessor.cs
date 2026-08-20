@@ -250,7 +250,14 @@ namespace AssemblyCodePlugin.Services
             Dictionary<ElementId, ElementMutation> pendingGroupMutations)
         {
             bool excludeFromBgl = (settings != null && settings.DisableZoneSplit) || rule.ExcludeFromBglRename || (settings != null && settings.NeverAddBglSuffix);
-            string ruleSuffix = (rule.RevitFilter != null && rule.RevitFilter.AppendTypeSuffix) ? rule.RevitFilter.TypeSuffix : "";
+            
+            bool isCodeInstanceParam = elements.Count > 0 && IsWritableInstanceParam(elements[0], settings.AssemblyCodeParamName);
+            string ruleSuffix = "";
+            if (!isCodeInstanceParam && rule.RevitFilter != null && rule.RevitFilter.AppendTypeSuffix)
+            {
+                ruleSuffix = rule.RevitFilter.TypeSuffix;
+            }
+
             ElementType targetType = EnsureCorrectTypeNameFast(
                 sourceType, isUnderground, excludeFromBgl, ruleSuffix, typeIndex, report, canRenameSourceType);
 
@@ -286,7 +293,6 @@ namespace AssemblyCodePlugin.Services
                     TrySetStringParamIfChanged(targetType, settings.AssemblyCodeParamName, code);
 
                     // Если параметр кода является параметром экземпляра — записываем во все элементы
-                    bool isCodeInstanceParam = elements.Count > 0 && IsWritableInstanceParam(elements[0], settings.AssemblyCodeParamName);
                     if (isCodeInstanceParam)
                     {
                         foreach (var elem in elements)

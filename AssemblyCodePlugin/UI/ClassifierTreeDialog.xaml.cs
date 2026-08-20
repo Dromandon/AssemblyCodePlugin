@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -14,6 +14,7 @@ namespace AssemblyCodePlugin.UI
     public class ClassifierNode : INotifyPropertyChanged
     {
         public AssemblyCodeItem Item { get; set; }
+        public ClassifierNode Parent { get; set; }
         public ObservableCollection<ClassifierNode> Children { get; set; } = new ObservableCollection<ClassifierNode>();
         public string DisplayText => Item.HasChildren ? $"🗂 {Item.Code} — {Item.Description}" : $"📄 {Item.Code} — {Item.Description}";
         
@@ -43,7 +44,7 @@ namespace AssemblyCodePlugin.UI
         
         public AssemblyCodeItem SelectedItem { get; private set; }
 
-        public ClassifierTreeDialog(List<AssemblyCodeItem> allItems, List<string> recommendedCodes)
+        public ClassifierTreeDialog(List<AssemblyCodeItem> allItems, List<string> recommendedCodes, string currentSelectionCode = null)
         {
             InitializeComponent();
             
@@ -56,6 +57,26 @@ namespace AssemblyCodePlugin.UI
             if (RecommendedNodes.Count == 0)
             {
                 PanelRecommended.Visibility = Visibility.Collapsed;
+            }
+
+            // Выделяем текущий элемент, если он передан
+            if (!string.IsNullOrEmpty(currentSelectionCode))
+            {
+                // Очищаем от возможных эмодзи и описания (если была передана полная строка "⚠️ Код — Описание")
+                string codeOnly = currentSelectionCode.Split(new[] { " — " }, StringSplitOptions.None)[0].Replace("⚠️", "").Trim();
+                
+                var targetNode = _allNodes.FirstOrDefault(n => string.Equals(n.Item.Code, codeOnly, StringComparison.OrdinalIgnoreCase));
+                if (targetNode != null)
+                {
+                    targetNode.IsSelected = true;
+                    // Раскрываем всех родителей
+                    var p = targetNode.Parent;
+                    while (p != null)
+                    {
+                        p.IsExpanded = true;
+                        p = p.Parent;
+                    }
+                }
             }
         }
 
@@ -75,6 +96,7 @@ namespace AssemblyCodePlugin.UI
                 var node = nodeDict[item.Code];
                 if (!string.IsNullOrEmpty(item.ParentCode) && nodeDict.TryGetValue(item.ParentCode, out var parentNode))
                 {
+                    node.Parent = parentNode;
                     parentNode.Children.Add(node);
                 }
                 else
@@ -128,6 +150,15 @@ namespace AssemblyCodePlugin.UI
         private void BtnClearSearch_Click(object sender, RoutedEventArgs e)
         {
             TxtSearch.Text = "";
+        }
+
+        private void TreeViewItem_Selected(object sender, RoutedEventArgs e)
+        {
+            if (sender is TreeViewItem tvi)
+            {
+                tvi.BringIntoView();
+                e.Handled = true; // предотвращаем всплытие
+            }
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)

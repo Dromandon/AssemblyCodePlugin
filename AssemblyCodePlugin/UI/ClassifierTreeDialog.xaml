@@ -1,4 +1,4 @@
-﻿<Window x:Class="AssemblyCodePlugin.UI.ClassifierTreeDialog"
+<Window x:Class="AssemblyCodePlugin.UI.ClassifierTreeDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Навигатор классификатора" Height="700" Width="650"
@@ -147,6 +147,7 @@
                     <Style TargetType="TreeViewItem">
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                         <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                        <EventSetter Event="Selected" Handler="TreeViewItem_Selected"/>
                     </Style>
                 </TreeView.ItemContainerStyle>
             </TreeView>

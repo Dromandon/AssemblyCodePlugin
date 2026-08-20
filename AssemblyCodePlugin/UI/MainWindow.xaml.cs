@@ -133,10 +133,10 @@ namespace AssemblyCodePlugin.UI
         public bool IsAboveMatchNotFound => IsAboveActive && SelectedAboveMatch != null && SelectedAboveMatch.IndexOf("Не удалось автоматически найти", StringComparison.OrdinalIgnoreCase) >= 0;
         public bool IsBelowMatchNotFound => IsBelowActive && SelectedBelowMatch != null && SelectedBelowMatch.IndexOf("Не удалось автоматически найти", StringComparison.OrdinalIgnoreCase) >= 0;
 
-        public void SetMatches(List<AssemblyCodeItem> above, List<AssemblyCodeItem> below, IReadOnlyList<AssemblyCodeItem> allClassifierItems = null)
+        public void SetMatches(List<AssemblyCodeItem> above, List<AssemblyCodeItem> below, IReadOnlyList<AssemblyCodeItem> allClassifierItems = null, bool forceAutoSelect = false)
         {
-            string prevAbove = Rule.VerifiedAboveCode;
-            string prevBelow = Rule.VerifiedBelowCode;
+            string prevAbove = forceAutoSelect ? null : Rule.VerifiedAboveCode;
+            string prevBelow = forceAutoSelect ? null : Rule.VerifiedBelowCode;
 
             _pathToCodeMap.Clear();
             if (allClassifierItems != null)
@@ -711,7 +711,7 @@ namespace AssemblyCodePlugin.UI
         }
 
         // ─── Автоматический пересчёт классификатора для строки ────────────────────
-        private void UpdateMatchesForRow(RuleRowViewModel row)
+        private void UpdateMatchesForRow(RuleRowViewModel row, bool forceAutoSelect = false)
         {
             try
             {
@@ -723,7 +723,7 @@ namespace AssemblyCodePlugin.UI
                     var belowCandidates = ClassifierRatingEngine.FindPositiveMatches(
                         classifierItems, byCode, row.Rule.UndergroundSearchRule, isUnderground: true);
 
-                    row.SetMatches(aboveCandidates, belowCandidates, classifierItems);
+                    row.SetMatches(aboveCandidates, belowCandidates, classifierItems, forceAutoSelect);
                 }
             }
             catch { }
@@ -795,7 +795,7 @@ namespace AssemblyCodePlugin.UI
                 {
                     var updatedRow = new RuleRowViewModel(dlg.Result) { FolderName = row.FolderName };
                     _rows[idx] = updatedRow;
-                    UpdateMatchesForRow(updatedRow);
+                    UpdateMatchesForRow(updatedRow, forceAutoSelect: true);
                 }
             }
         }
@@ -1172,7 +1172,9 @@ namespace AssemblyCodePlugin.UI
                     recommended.Add(match);
                 }
 
-                var dlg = new ClassifierTreeDialog(allItems.ToList(), recommended) { Owner = this };
+                string currentSelection = isAbove ? rowVm.SelectedAboveMatch : rowVm.SelectedBelowMatch;
+
+                var dlg = new ClassifierTreeDialog(allItems.ToList(), recommended, currentSelection) { Owner = this };
                 if (dlg.ShowDialog() == true && dlg.SelectedItem != null)
                 {
                     string newVal = dlg.SelectedItem.HasChildren ? $"⚠️ {dlg.SelectedItem.Code} — {dlg.SelectedItem.Description}" : $"{dlg.SelectedItem.Code} — {dlg.SelectedItem.Description}";
