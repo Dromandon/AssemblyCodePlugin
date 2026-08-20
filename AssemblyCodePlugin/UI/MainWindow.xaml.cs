@@ -500,24 +500,27 @@ namespace AssemblyCodePlugin.UI
 
                 foreach (var row in _rows)
                 {
-                    if (!string.IsNullOrEmpty(currentClassifierFile) && row.Rule.SavedAboveByClassifier != null &&
-                        row.Rule.SavedAboveByClassifier.TryGetValue(currentClassifierFile, out var savedAbove))
+                    if (isNewClassifier)
                     {
-                        row.Rule.VerifiedAboveCode = savedAbove;
-                    }
-                    else if (isNewClassifier)
-                    {
-                        row.Rule.VerifiedAboveCode = null;
-                    }
+                        if (!string.IsNullOrEmpty(currentClassifierFile) && row.Rule.SavedAboveByClassifier != null &&
+                            row.Rule.SavedAboveByClassifier.TryGetValue(currentClassifierFile, out var savedAbove))
+                        {
+                            row.Rule.VerifiedAboveCode = savedAbove;
+                        }
+                        else
+                        {
+                            row.Rule.VerifiedAboveCode = null;
+                        }
 
-                    if (!string.IsNullOrEmpty(currentClassifierFile) && row.Rule.SavedBelowByClassifier != null &&
-                        row.Rule.SavedBelowByClassifier.TryGetValue(currentClassifierFile, out var savedBelow))
-                    {
-                        row.Rule.VerifiedBelowCode = savedBelow;
-                    }
-                    else if (isNewClassifier)
-                    {
-                        row.Rule.VerifiedBelowCode = null;
+                        if (!string.IsNullOrEmpty(currentClassifierFile) && row.Rule.SavedBelowByClassifier != null &&
+                            row.Rule.SavedBelowByClassifier.TryGetValue(currentClassifierFile, out var savedBelow))
+                        {
+                            row.Rule.VerifiedBelowCode = savedBelow;
+                        }
+                        else
+                        {
+                            row.Rule.VerifiedBelowCode = null;
+                        }
                     }
                 }
 
@@ -950,7 +953,7 @@ namespace AssemblyCodePlugin.UI
         private void MoveSelectedToFolder(string folderName)
         {
             if (GridRules.SelectedItems == null || GridRules.SelectedItems.Count == 0) return;
-            var selectedRows = GridRules.SelectedItems.Cast<RuleRowViewModel>().ToList();
+            var selectedRows = GridRules.SelectedItems.OfType<RuleRowViewModel>().ToList();
 
             foreach (var row in selectedRows)
             {

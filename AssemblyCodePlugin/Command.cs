@@ -14,6 +14,11 @@ namespace AssemblyCodePlugin
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             var uiApp = commandData.Application;
+            if (uiApp.ActiveUIDocument == null)
+            {
+                TaskDialog.Show("Кодификатор", "Нет открытого документа Revit.");
+                return Result.Cancelled;
+            }
             var doc = uiApp.ActiveUIDocument.Document;
 
             try

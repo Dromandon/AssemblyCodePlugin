@@ -96,7 +96,7 @@ namespace AssemblyCodePlugin.Services
 
             var pendingGroupMutations = new Dictionary<ElementId, ElementMutation>();
 
-            using (var tx = new Transaction(doc, "Заполнение кодификатора (Antigravity)"))
+            using (var tx = new Transaction(doc, "Заполнение кодификатора"))
             {
                 PluginLogger.Log("4. Старт транзакции Revit...");
                 tx.Start();
@@ -352,7 +352,7 @@ namespace AssemblyCodePlugin.Services
 
             bool isInstanceParam = false;
             string undergroundText = "";
-            if (settings == null || !settings.DisableZoneSplit)
+            if (settings != null && !settings.DisableZoneSplit)
             {
                 // 3. Записываем FAM_Underground в ТИПОРАЗМЕР (если это параметр типа)
                 undergroundText = isUnderground
@@ -780,8 +780,12 @@ namespace AssemblyCodePlugin.Services
 
         private static string ExtractCodeFromPreview(string preview)
         {
-            if (string.IsNullOrWhiteSpace(preview) || preview.StartsWith("—") || preview.StartsWith("─") || preview.StartsWith("⚠️") || preview.Contains("Не удалось") || preview.StartsWith("Не найдено"))
+            if (string.IsNullOrWhiteSpace(preview) || preview.StartsWith("—") || preview.StartsWith("─") || preview.Contains("Не удалось") || preview.Contains("Файл классификатора не найден") || preview.StartsWith("Не найдено"))
                 return null;
+
+            if (preview.StartsWith("⚠️ "))
+                preview = preview.Substring(3);
+
             int dashIdx = preview.IndexOf(" — ");
             if (dashIdx > 0)
                 return preview.Substring(0, dashIdx).Trim();

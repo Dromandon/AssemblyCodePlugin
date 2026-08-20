@@ -48,12 +48,15 @@ namespace AssemblyCodePlugin.Services
             {
                 try
                 {
-                    var tableRef = AssemblyCodeTable.GetAssemblyCodeTable(doc)
-                                                    .GetExternalFileReference();
-                    if (tableRef != null)
+                    var assemblyCodeTable = AssemblyCodeTable.GetAssemblyCodeTable(doc);
+                    if (assemblyCodeTable != null)
                     {
-                        var mp = tableRef.GetAbsolutePath();
-                        filePath = ModelPathUtils.ConvertModelPathToUserVisiblePath(mp);
+                        var tableRef = assemblyCodeTable.GetExternalFileReference();
+                        if (tableRef != null)
+                        {
+                            var mp = tableRef.GetAbsolutePath();
+                            filePath = ModelPathUtils.ConvertModelPathToUserVisiblePath(mp);
+                        }
                     }
                 }
                 catch { /* не удалось — будем без файла */ }

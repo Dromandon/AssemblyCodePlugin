@@ -8,7 +8,7 @@ namespace AssemblyCodePlugin.Services
     public static class PluginLogger
     {
         private static string _logFilePath;
-        private static object _lock = new object();
+        private static readonly object _lock = new object();
 
         public static string LogFilePath => _logFilePath;
 

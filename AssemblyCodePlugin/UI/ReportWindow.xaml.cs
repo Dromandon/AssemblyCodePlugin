@@ -488,11 +488,11 @@ namespace AssemblyCodePlugin.UI
 
                     try { app.ActiveUIDocument.RefreshActiveView(); } catch { }
 
-                    Dispatcher.Invoke(() =>
+                    Dispatcher.BeginInvoke(new Action(() =>
                     {
                         _isHighlightActive = true;
                         BtnToggleHighlight.Content = "🔄 Сбросить подсветку";
-                    });
+                    }));
                 }
                 catch (Exception ex)
                 {
@@ -535,11 +535,13 @@ namespace AssemblyCodePlugin.UI
 
                     try { app.ActiveUIDocument.RefreshActiveView(); } catch { }
 
-                    Dispatcher.Invoke(() =>
+
+
+                    Dispatcher.BeginInvoke(new Action(() =>
                     {
                         _isHighlightActive = false;
                         BtnToggleHighlight.Content = "💡 Подсветить на 3D";
-                    });
+                    }));
                 }
                 catch (Exception ex)
                 {
@@ -607,6 +609,7 @@ namespace AssemblyCodePlugin.UI
             {
                 ResetHighlight();
             }
+            _exEvent?.Dispose();
         }
     }
 }
