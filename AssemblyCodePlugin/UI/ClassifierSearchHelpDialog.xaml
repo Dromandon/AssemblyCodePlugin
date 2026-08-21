@@ -62,7 +62,12 @@
                             <Run Text=" и "/>
                             <Run Text="«Исключения»" FontWeight="SemiBold"/>
                             <Run Text=") и таблица бонусных баллов."/>
-                            <LineBreak/>
+                            <LineBreak/><LineBreak/>
+                            <Run Text="💡 Важно: " FontWeight="Bold" Foreground="#D97706"/>
+                            <Run Text="Поиск слов и начисление баллов происходит "/>
+                            <Run Text="по всему пути классификатора" FontWeight="Bold"/>
+                            <Run Text=", включая названия всех родительских папок и разделов, а не только по конечному элементу."/>
+                            <LineBreak/><LineBreak/>
                             <Run Text="Между тремя основными фильтрами действует логическое правило "/>
                             <Run Text="«И» (AND)" FontWeight="Bold" Foreground="#2563EB"/>
                             <Run Text=": чтобы позиция классификатора подошла, она должна одновременно удовлетворять условиям всех трёх списков."/>
@@ -75,29 +80,47 @@
                     <StackPanel>
                         <TextBlock Text="1. Условие «Хотя бы одно слово (AnyTrue)» — логика ИЛИ" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,4"/>
                         <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#475569" Margin="0,0,0,12">
-                            Если в этот список добавлены слова, то в названии или описании позиции классификатора должно присутствовать <Run Text="хотя бы одно" FontWeight="SemiBold"/> из них, чтобы условие выполнилось.
+                            Если в этот список добавлены слова, то в <Run Text="полном пути" FontWeight="SemiBold"/> или описании позиции классификатора должно присутствовать <Run Text="хотя бы одно" FontWeight="SemiBold"/> из них, чтобы условие выполнилось.
                         </TextBlock>
 
                         <TextBlock Text="2. Условие «Все слова (AllTrue)» — логика И" FontSize="13" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,4"/>
                         <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#475569" Margin="0,0,0,12">
-                            <Run Text="Все слова" FontWeight="SemiBold"/>, прописанные в данном условии, должны одновременно находиться в тексте классификатора, чтобы данное условие выполнялось.
+                            <Run Text="Все слова" FontWeight="SemiBold"/>, прописанные в данном условии, должны одновременно находиться в <Run Text="полном пути" FontWeight="SemiBold"/> классификатора, чтобы данное условие выполнялось.
                         </TextBlock>
 
                         <TextBlock Text="3. Условие «Исключения (Exceptions)» — логика НЕ" FontSize="13" FontWeight="Bold" Foreground="#DC2626" Margin="0,0,0,4"/>
                         <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#475569">
-                            <Run Text="Ни одно" FontWeight="SemiBold"/> из указанных в этом списке слов не должно присутствовать в классификаторе. Если в строке классификатора встречается хотя бы одно слово-исключение, позиция отбрасывается.
+                            <Run Text="Ни одно" FontWeight="SemiBold"/> из указанных в этом списке слов не должно присутствовать в <Run Text="пути классификатора" FontWeight="SemiBold"/>. Если во всём пути (включая папки) встречается хотя бы одно слово-исключение, позиция отбрасывается.
                         </TextBlock>
                     </StackPanel>
                 </Border>
 
-                <!-- 3. Бонусные баллы -->
+                <!-- 3. Бонусные баллы и Наследование -->
                 <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="Бонусные баллы (ExtraTrue)" FontSize="14" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,6"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="#334155" LineHeight="19">
-                            <Run Text="Дополнительные необязательные слова. Их нахождение в строке классификатора не отсекает варианты, а "/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="#334155" LineHeight="19" Margin="0,0,0,12">
+                            <Run Text="Дополнительные необязательные слова. Их нахождение в полном пути классификатора не отсекает варианты, а "/>
                             <Run Text="поднимает рейтинг" FontWeight="Bold" Foreground="#059669"/>
                             <Run Text=" позиции среди других найденных на заданное количество баллов. Это помогает вывести наиболее точный код на первое место списка."/>
+                        </TextBlock>
+                        
+                        <TextBlock Text="💡 Наследование баллов и условий от папок" FontSize="13" FontWeight="Bold" Foreground="#D97706" Margin="0,0,0,4"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#475569">
+                            <Run Text="Поскольку поиск идёт по всему пути, если ключевое слово или слово для бонуса найдено в названии "/>
+                            <Run Text="родительской папки" FontWeight="SemiBold"/>
+                            <Run Text=" (раздела), то "/>
+                            <Run Text="все подпункты внутри этой папки" FontWeight="Bold"/>
+                            <Run Text=" автоматически получат эти баллы или пройдут фильтр, так как они наследуют путь родителя."/>
+                            <LineBreak/><LineBreak/>
+                            <Run Text="Пример:" FontWeight="SemiBold" Foreground="#0F172A"/>
+                            <Run Text=" Если вы назначите +10 баллов за слово "/>
+                            <Run Text="«Стены»" FontFamily="Consolas" Foreground="#0F172A"/>
+                            <Run Text=", то конечные элементы "/>
+                            <Run Text="«Стены > Внутренние»" FontFamily="Consolas" Foreground="#0F172A"/>
+                            <Run Text=" и "/>
+                            <Run Text="«Стены > Наружные»" FontFamily="Consolas" Foreground="#0F172A"/>
+                            <Run Text=" оба получат по +10 баллов, так как слово «Стены» содержится в их родительском пути."/>
                         </TextBlock>
                     </StackPanel>
                 </Border>

@@ -41,9 +41,18 @@ namespace AssemblyCodePlugin.Services
 
         public static ZeroZoneContext BuildContext(Document doc, ZeroLevelSettings settings)
         {
-            double lowElev = GetLevelElevation(doc, settings.LowLevelName)
+            Dictionary<string, double> levelElevations;
+            using (var collector = new FilteredElementCollector(doc).OfClass(typeof(Level)))
+            {
+                levelElevations = collector.Cast<Level>().ToDictionary(l => l.Name, l => l.Elevation, StringComparer.OrdinalIgnoreCase);
+            }
+
+            double GetElevation(string name) =>
+                !string.IsNullOrEmpty(name) && levelElevations.TryGetValue(name, out var e) ? e : 0.0;
+
+            double lowElev = GetElevation(settings.LowLevelName)
                              + settings.LowLevelOffsetMm * MmToFeet;
-            double highElev = GetLevelElevation(doc, settings.HighLevelName)
+            double highElev = GetElevation(settings.HighLevelName)
                               + settings.HighLevelOffsetMm * MmToFeet;
 
             if (lowElev > highElev)
@@ -54,10 +63,11 @@ namespace AssemblyCodePlugin.Services
             }
 
             // Находим все плиты перекрытий и сразу предвычисляем их BoundingBox в память C#
-            var allFloors = new FilteredElementCollector(doc)
-                .OfCategory(BuiltInCategory.OST_Floors)
-                .WhereElementIsNotElementType()
-                .ToElements();
+            List<Element> allFloors;
+            using (var collector = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Floors).WhereElementIsNotElementType())
+            {
+                allFloors = collector.ToList();
+            }
 
             var zeroFloors = new List<FloorZoneData>();
             foreach (var f in allFloors)
@@ -317,17 +327,6 @@ namespace AssemblyCodePlugin.Services
             return ZoneResult.Unknown;
         }
 
-        private static double GetLevelElevation(Document doc, string levelName)
-        {
-            if (string.IsNullOrEmpty(levelName) || doc == null) return 0;
-            var levels = new FilteredElementCollector(doc)
-                .OfClass(typeof(Level)).Cast<Level>();
-            foreach (var lv in levels)
-            {
-                if (string.Equals(lv.Name, levelName, StringComparison.OrdinalIgnoreCase))
-                    return lv.Elevation;
-            }
-            return 0;
-        }
+
     }
 }

@@ -597,7 +597,7 @@ namespace AssemblyCodePlugin.UI
             {
                 Id = _source.Id,
                 ElementTypeName = TxtTypeName.Text?.Trim() ?? "",
-                IsEnabled = true,
+                IsEnabled = _source?.IsEnabled ?? true,
                 ExcludeFromBglRename = _source.ExcludeFromBglRename,
                 SkipAboveGround = ChkSkipAboveGround.IsChecked == true,
                 SkipUnderground = ChkSkipUnderground.IsChecked == true,

@@ -135,6 +135,12 @@ namespace AssemblyCodePlugin.Services
         {
             if (clusters == null || clusters.Count == 0) return;
 
+            HashSet<string> existingGroupTypeNames;
+            using (var collector = new FilteredElementCollector(doc).OfClass(typeof(GroupType)))
+            {
+                existingGroupTypeNames = new HashSet<string>(collector.Select(e => e.Name), StringComparer.OrdinalIgnoreCase);
+            }
+
             int cIdx = 0;
             foreach (var cluster in clusters)
             {
@@ -146,6 +152,10 @@ namespace AssemblyCodePlugin.Services
                 var templateGroup = cluster.Instances.First();
                 var templateMemberIds = templateGroup.GetMemberIds();
 
+                Group refGroup = null;
+                Group phantomGroup = null;
+                Group newGroup = null;
+
                 try
                 {
                     // Двигаем песочницу ТОЛЬКО по X и Y. Если сдвинуть по Z, элементы получат Z-оффсет,
@@ -154,12 +164,12 @@ namespace AssemblyCodePlugin.Services
                     var copiedIds = ElementTransformUtils.CopyElement(doc, templateGroup.Id, offset);
                     if (copiedIds == null || copiedIds.Count == 0) continue;
                     
-                    Group phantomGroup = doc.GetElement(copiedIds.First()) as Group;
+                    phantomGroup = doc.GetElement(copiedIds.First()) as Group;
                     if (phantomGroup == null) continue;
 
                     // Сбрасываем поворот у копии, чтобы она была в нулевой ориентации.
                     // Создаем временный эталон для вычисления угла поворота
-                    Group refGroup = doc.Create.PlaceGroup(XYZ.Zero, cluster.OriginalGroupType);
+                    refGroup = doc.Create.PlaceGroup(XYZ.Zero, cluster.OriginalGroupType);
                     double rotAngle = CalculateGroupRotation(phantomGroup, refGroup);
                     
                     var phantomLoc = phantomGroup.Location as LocationPoint;
@@ -217,7 +227,7 @@ namespace AssemblyCodePlugin.Services
                         }
                     }
 
-                    Group newGroup = doc.Create.NewGroup(elementsForNewGroup);
+                    newGroup = doc.Create.NewGroup(elementsForNewGroup);
                     GroupType newGroupType = newGroup.GroupType;
                     
                     // Вычисляем вектор смещения новой базовой точки в локальных координатах.
@@ -227,12 +237,13 @@ namespace AssemblyCodePlugin.Services
 
                     string finalName = cluster.TargetGroupTypeName;
                     int nameCounter = 1;
-                    while (IsGroupTypeNameInUse(doc, finalName) && newGroupType.Name != finalName)
+                    while (existingGroupTypeNames.Contains(finalName) && newGroupType.Name != finalName)
                     {
                         finalName = $"{cluster.TargetGroupTypeName}_{nameCounter}";
                         nameCounter++;
                     }
                     newGroupType.Name = finalName;
+                    existingGroupTypeNames.Add(finalName);
 
                     // Запоминаем соединения со внешними элементами до смены типа
                     var joinsByGroup = new Dictionary<ElementId, List<JoinRecord>>();
@@ -251,6 +262,7 @@ namespace AssemblyCodePlugin.Services
                     }
                     
                     doc.Delete(refGroup.Id); // Удаляем эталон
+                    refGroup = null;
 
                     foreach (var inst in cluster.Instances)
                     {
@@ -270,6 +282,7 @@ namespace AssemblyCodePlugin.Services
                     // Удаляем песочный экземпляр ТОЛЬКО ПОСЛЕ ТОГО, как тип назначен боевым экземплярам,
                     // чтобы Revit не очистил новый GroupType из-за отсутствия ссылок на него.
                     doc.Delete(newGroup.Id);
+                    newGroup = null;
 
                     // Восстанавливаем соединения
                     foreach (var inst in cluster.Instances)
@@ -289,6 +302,14 @@ namespace AssemblyCodePlugin.Services
                     {
                         ReportGroupError(inst, $"Сбой сборки новой группы ({ex.Message})", report, doc);
                     }
+                }
+                finally
+                {
+                    // Гарантированная очистка временных элементов
+                    if (phantomGroup != null && phantomGroup.IsValidObject)
+                        try { doc.Delete(phantomGroup.Id); } catch { }
+                    if (refGroup != null && refGroup.IsValidObject)
+                        try { doc.Delete(refGroup.Id); } catch { }
                 }
             }
         }

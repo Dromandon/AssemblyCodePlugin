@@ -277,7 +277,7 @@ namespace AssemblyCodePlugin.UI
         private readonly Document _doc;
         private readonly UIApplication _uiApp;
         private PluginSettings _settings;
-        private readonly ObservableCollection<RuleRowViewModel> _rows;
+        private readonly BulkObservableCollection<RuleRowViewModel> _rows;
         private System.Windows.Data.CollectionViewSource _cvsRules;
         private bool _runRequested = false;
         private List<ParamInfo> _availableParams = new List<ParamInfo>();
@@ -304,8 +304,8 @@ namespace AssemblyCodePlugin.UI
                 CmbAssemblyDescParam.ItemsSource = _availableParams;
             }
 
-            _rows = new ObservableCollection<RuleRowViewModel>(
-                settings.Rules.Select(r => new RuleRowViewModel(r)));
+            _rows = new BulkObservableCollection<RuleRowViewModel>();
+            _rows.AddRange(settings.Rules.Select(r => new RuleRowViewModel(r)));
                 
             _cvsRules = new System.Windows.Data.CollectionViewSource();
             _cvsRules.Source = _rows;
@@ -383,9 +383,7 @@ namespace AssemblyCodePlugin.UI
             _settings = ConfigService.LoadConfig(newConfig);
 
             LoadSettingsToUi(_settings);
-            _rows.Clear();
-            foreach (var r in _settings.Rules)
-                _rows.Add(new RuleRowViewModel(r));
+            _rows.ReplaceAll(_settings.Rules.Select(r => new RuleRowViewModel(r)));
 
             UpdateAllMatchesInUi();
         }
@@ -438,9 +436,7 @@ namespace AssemblyCodePlugin.UI
                 ConfigService.SetActiveConfigName(first);
                 _settings = ConfigService.LoadConfig(first);
                 LoadSettingsToUi(_settings);
-                _rows.Clear();
-                foreach (var r in _settings.Rules)
-                    _rows.Add(new RuleRowViewModel(r));
+                _rows.ReplaceAll(_settings.Rules.Select(r => new RuleRowViewModel(r)));
                 RefreshConfigsList(first);
                 UpdateAllMatchesInUi();
             }
@@ -465,9 +461,7 @@ namespace AssemblyCodePlugin.UI
                 ConfigService.SaveConfig(name, loaded);
                 _settings = loaded;
                 LoadSettingsToUi(_settings);
-                _rows.Clear();
-                foreach (var r in _settings.Rules)
-                    _rows.Add(new RuleRowViewModel(r));
+                _rows.ReplaceAll(_settings.Rules.Select(r => new RuleRowViewModel(r)));
                 RefreshConfigsList(name);
                 UpdateAllMatchesInUi();
             }
@@ -535,7 +529,7 @@ namespace AssemblyCodePlugin.UI
                     TxtStatus.Text = $"Классификатор подключен ({classifierItems.Count} позиций). Готов к работе.";
                     foreach (var row in _rows)
                     {
-                        UpdateMatchesForRow(row);
+                        UpdateMatchesForRow(row, classifierItems, byCode);
                     }
                 }
                 else
@@ -714,11 +708,10 @@ namespace AssemblyCodePlugin.UI
         }
 
         // ─── Автоматический пересчёт классификатора для строки ────────────────────
-        private void UpdateMatchesForRow(RuleRowViewModel row, bool forceAutoSelect = false)
+        private void UpdateMatchesForRow(RuleRowViewModel row, IReadOnlyList<AssemblyCodeItem> classifierItems, IReadOnlyDictionary<string, AssemblyCodeItem> byCode, bool forceAutoSelect = false)
         {
             try
             {
-                var (classifierItems, byCode, _) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _settings.IgnoreDeepClassifiers);
                 if (classifierItems != null && classifierItems.Count > 0)
                 {
                     var aboveCandidates = ClassifierRatingEngine.FindPositiveMatches(
@@ -766,7 +759,8 @@ namespace AssemblyCodePlugin.UI
             {
                 var row = new RuleRowViewModel(dlg.Result);
                 _rows.Add(row);
-                UpdateMatchesForRow(row);
+                var (items, byCode, _) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _settings.IgnoreDeepClassifiers);
+                UpdateMatchesForRow(row, items, byCode);
             }
         }
 
@@ -780,7 +774,8 @@ namespace AssemblyCodePlugin.UI
                 _rows.Insert(idx + 1, copyRow);
                 GridRules.SelectedItem = copyRow;
                 GridRules.ScrollIntoView(copyRow);
-                UpdateMatchesForRow(copyRow);
+                var (items, byCode, _) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _settings.IgnoreDeepClassifiers);
+                UpdateMatchesForRow(copyRow, items, byCode);
             }
         }
 
@@ -798,7 +793,8 @@ namespace AssemblyCodePlugin.UI
                 {
                     var updatedRow = new RuleRowViewModel(dlg.Result) { FolderName = row.FolderName };
                     _rows[idx] = updatedRow;
-                    UpdateMatchesForRow(updatedRow, forceAutoSelect: true);
+                    var (items, byCode, _) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _settings.IgnoreDeepClassifiers);
+                    UpdateMatchesForRow(updatedRow, items, byCode, forceAutoSelect: true);
                 }
             }
         }
@@ -1033,11 +1029,7 @@ namespace AssemblyCodePlugin.UI
             // Добавляем элементы без папки в самом конце
             newRows.AddRange(_rows.Where(r => string.IsNullOrEmpty(r.FolderName)));
 
-            _rows.Clear();
-            foreach (var r in newRows)
-            {
-                _rows.Add(r);
-            }
+            _rows.ReplaceAll(newRows);
         }
 
         // ─── Сохранение и запуск ──────────────────────────────────────────────────
@@ -1151,7 +1143,7 @@ namespace AssemblyCodePlugin.UI
         private void SetStatus(string text) => TxtStatus.Text = text;
 
         private static double TryParseDouble(string text) =>
-            double.TryParse(text?.Trim(), out double val) ? val : 0;
+            double.TryParse(text?.Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double val) ? val : 0;
 
         private void BtnOpenTree_Click(object sender, RoutedEventArgs e)
         {

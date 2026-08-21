@@ -87,6 +87,12 @@ namespace AssemblyCodePlugin.UI
         
         private void RenderChildren()
         {
+            // Отписываемся от событий старых дочерних контролов
+            foreach (FilterNodeControl old in ChildrenContainer.Children.OfType<FilterNodeControl>())
+            {
+                old.NodeDeleted -= ChildControl_NodeDeleted;
+                old.NodeChanged -= ChildControl_NodeChanged;
+            }
             ChildrenContainer.Children.Clear();
             if (_node.Children == null) return;
             

@@ -584,7 +584,7 @@ namespace AssemblyCodePlugin.UI
             {
                 if (!string.IsNullOrEmpty(PluginLogger.LogFilePath) && System.IO.File.Exists(PluginLogger.LogFilePath))
                 {
-                    Process.Start(PluginLogger.LogFilePath);
+                    Process.Start(new System.Diagnostics.ProcessStartInfo(PluginLogger.LogFilePath) { UseShellExecute = true });
                 }
                 else
                 {

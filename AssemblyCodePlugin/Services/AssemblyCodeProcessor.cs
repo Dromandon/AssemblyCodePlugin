@@ -37,6 +37,7 @@ namespace AssemblyCodePlugin.Services
     {
         public static ProcessingReport Process(Document doc, PluginSettings settings)
         {
+            _warningSet.Clear();
             var report = new ProcessingReport();
             if (doc == null || settings == null) return report;
 
@@ -54,10 +55,11 @@ namespace AssemblyCodePlugin.Services
             PluginLogger.Log($"   -> Найдено плит на отметке нуля: {zeroCtx.ZeroLevelFloors.Count}");
 
             // 3. Предварительно собираем индекс всех типов в документе по имени (O(1) поиск без try/catch)
-            var allTypes = new FilteredElementCollector(doc)
-                .WhereElementIsElementType()
-                .Cast<ElementType>()
-                .ToList();
+            List<ElementType> allTypes;
+            using (var collector = new FilteredElementCollector(doc).WhereElementIsElementType())
+            {
+                allTypes = collector.Cast<ElementType>().ToList();
+            }
 
             var typesByNameAndClass = new Dictionary<(Type classType, string name), ElementType>();
             var elementTypeCache = new Dictionary<ElementId, ElementType>();
@@ -73,12 +75,13 @@ namespace AssemblyCodePlugin.Services
             }
 
             PluginLogger.Log("3. Сбор элементов целевых категорий из модели...");
-            var allElements = new FilteredElementCollector(doc)
-                .WhereElementIsNotElementType()
-                .ToElements()
-                .Where(e => e.Category != null && e.Category.Id.IntegerValue != (int)BuiltInCategory.OST_SectionBox)
-                .Where(e => HasParameter(e, doc, settings.AssemblyCodeParamName))
-                .ToList();
+            List<Element> allElements;
+            using (var collector = new FilteredElementCollector(doc).WhereElementIsNotElementType())
+            {
+                allElements = collector.Where(e => e.Category != null && e.Category.Id.IntegerValue != (int)BuiltInCategory.OST_SectionBox)
+                                       .Where(e => HasParameter(e, doc, settings.AssemblyCodeParamName))
+                                       .ToList();
+            }
 
             report.TotalElements = allElements.Count;
             PluginLogger.Log($"   -> Всего собранных элементов: {allElements.Count}");
@@ -172,7 +175,7 @@ namespace AssemblyCodePlugin.Services
 
                     if (unassignedElements.Count > 0)
                     {
-                        if (unassignedElements.Count == group.Count())
+                        if (unassignedElements.Count == countInGroup)
                             PluginLogger.Log($"       -> Правило не найдено для всех ({unassignedElements.Count}) экз. Пропуск.");
                         else
                             PluginLogger.Log($"       -> Для {unassignedElements.Count} экз. правило не найдено. Пропуск.");
@@ -700,8 +703,10 @@ namespace AssemblyCodePlugin.Services
                 report.CreatedTypes++;
                 return dup;
             }
-            catch
+            catch (Exception ex)
             {
+                PluginLogger.Log($"          [Внимание] Не удалось создать/переименовать тип '{targetName}': {ex.Message}. Используется исходный тип '{source?.Name}'.");
+                AddWarning(report.Warnings, $"Не удалось создать тип «{targetName}» — использован исходный тип «{source?.Name}»");
                 return source;
             }
         }
@@ -753,7 +758,7 @@ namespace AssemblyCodePlugin.Services
                 }
                 else if (param.StorageType == StorageType.Double)
                 {
-                    if (double.TryParse(value, out double targetDouble))
+                    if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double targetDouble))
                     {
                         if (Math.Abs(param.AsDouble() - targetDouble) > 1e-6)
                         {
@@ -773,9 +778,11 @@ namespace AssemblyCodePlugin.Services
             return false;
         }
 
+        private static readonly HashSet<string> _warningSet = new HashSet<string>(StringComparer.Ordinal);
+
         private static void AddWarning(List<string> list, string text)
         {
-            if (!list.Contains(text)) list.Add(text);
+            if (_warningSet.Add(text)) list.Add(text);
         }
 
         private static string ExtractCodeFromPreview(string preview)
