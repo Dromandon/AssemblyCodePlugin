@@ -125,7 +125,7 @@
                     <!-- Текстовый ввод (для String/Integer/Double) -->
                     <TextBox Grid.Column="1" x:Name="TxtUndergroundValue"/>
                     <!-- Выпадающий список (для YesNo) -->
-                    <ComboBox Grid.Column="1" x:Name="CmbUndergroundYesNo" Visibility="Collapsed" SelectionChanged="CmbUndergroundYesNo_SelectionChanged"/>
+                    <CheckBox Grid.Column="1" x:Name="ChkUndergroundYesNo" Content="Да" Visibility="Collapsed" VerticalAlignment="Center" Checked="ChkUndergroundYesNo_Changed" Unchecked="ChkUndergroundYesNo_Changed"/>
                 </Grid>
 
                 <!-- Надземная часть -->
@@ -138,7 +138,7 @@
                     <!-- Текстовый ввод (для String/Integer/Double) -->
                     <TextBox Grid.Column="1" x:Name="TxtAbovegroundValue"/>
                     <!-- Выпадающий список (для YesNo) -->
-                    <ComboBox Grid.Column="1" x:Name="CmbAbovegroundYesNo" Visibility="Collapsed"/>
+                    <CheckBox Grid.Column="1" x:Name="ChkAbovegroundYesNo" Content="Да" Visibility="Collapsed" VerticalAlignment="Center"/>
                 </Grid>
             </Grid>
         </Border>

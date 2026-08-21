@@ -29,10 +29,7 @@ namespace AssemblyCodePlugin.UI
 
             _allParams = allParams ?? new List<ParamInfo>();
 
-            // Заполняем варианты Да / Нет
-            var yesNoOptions = new[] { "Да (Yes)", "Нет (No)" };
-            CmbUndergroundYesNo.ItemsSource = yesNoOptions;
-            CmbAbovegroundYesNo.ItemsSource = yesNoOptions;
+
 
             // Заполняем список параметров
             CmbParamName.ItemsSource = _allParams;
@@ -55,8 +52,8 @@ namespace AssemblyCodePlugin.UI
             TxtAbovegroundValue.Text = currentAbovegroundValue ?? "Надземная часть";
 
             bool underIsTrue = IsYesValue(currentUndergroundValue);
-            CmbUndergroundYesNo.SelectedIndex = underIsTrue ? 0 : 1;
-            CmbAbovegroundYesNo.SelectedIndex = underIsTrue ? 1 : 0;
+            ChkUndergroundYesNo.IsChecked = underIsTrue;
+            ChkAbovegroundYesNo.IsChecked = !underIsTrue;
 
             if (ChkNeverAddBglSuffix != null)
                 ChkNeverAddBglSuffix.IsChecked = currentNeverAddBglSuffix;
@@ -93,14 +90,11 @@ namespace AssemblyCodePlugin.UI
             }
         }
 
-        private void CmbUndergroundYesNo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ChkUndergroundYesNo_Changed(object sender, RoutedEventArgs e)
         {
-            if (CmbAbovegroundYesNo == null) return;
+            if (ChkAbovegroundYesNo == null || ChkUndergroundYesNo == null) return;
             // Автоматически переключаем противоположное значение для надземной части
-            if (CmbUndergroundYesNo.SelectedIndex == 0)
-                CmbAbovegroundYesNo.SelectedIndex = 1;
-            else
-                CmbAbovegroundYesNo.SelectedIndex = 0;
+            ChkAbovegroundYesNo.IsChecked = !(ChkUndergroundYesNo.IsChecked == true);
         }
 
         private void UpdateInputMode(bool isYesNo)
@@ -112,20 +106,20 @@ namespace AssemblyCodePlugin.UI
                 if (TxtParamTypeHint != null) TxtParamTypeHint.Text = "Тип: Логический (Да/Нет)";
 
                 if (TxtUndergroundValue != null) TxtUndergroundValue.Visibility = Visibility.Collapsed;
-                if (CmbUndergroundYesNo != null) CmbUndergroundYesNo.Visibility = Visibility.Visible;
+                if (ChkUndergroundYesNo != null) ChkUndergroundYesNo.Visibility = Visibility.Visible;
 
                 if (TxtAbovegroundValue != null) TxtAbovegroundValue.Visibility = Visibility.Collapsed;
-                if (CmbAbovegroundYesNo != null) CmbAbovegroundYesNo.Visibility = Visibility.Visible;
+                if (ChkAbovegroundYesNo != null) ChkAbovegroundYesNo.Visibility = Visibility.Visible;
             }
             else
             {
                 if (TxtParamTypeHint != null) TxtParamTypeHint.Text = "Тип: Текст / Число";
 
                 if (TxtUndergroundValue != null) TxtUndergroundValue.Visibility = Visibility.Visible;
-                if (CmbUndergroundYesNo != null) CmbUndergroundYesNo.Visibility = Visibility.Collapsed;
+                if (ChkUndergroundYesNo != null) ChkUndergroundYesNo.Visibility = Visibility.Collapsed;
 
                 if (TxtAbovegroundValue != null) TxtAbovegroundValue.Visibility = Visibility.Visible;
-                if (CmbAbovegroundYesNo != null) CmbAbovegroundYesNo.Visibility = Visibility.Collapsed;
+                if (ChkAbovegroundYesNo != null) ChkAbovegroundYesNo.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -141,8 +135,8 @@ namespace AssemblyCodePlugin.UI
 
             if (ResultIsYesNo)
             {
-                ResultUndergroundValue = CmbUndergroundYesNo.SelectedIndex == 0 ? "Да" : "Нет";
-                ResultAbovegroundValue = CmbAbovegroundYesNo.SelectedIndex == 0 ? "Да" : "Нет";
+                ResultUndergroundValue = ChkUndergroundYesNo.IsChecked == true ? "Да" : "Нет";
+                ResultAbovegroundValue = ChkAbovegroundYesNo.IsChecked == true ? "Да" : "Нет";
             }
             else
             {
