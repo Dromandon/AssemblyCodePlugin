@@ -36,11 +36,11 @@ namespace AssemblyCodePlugin
 
                 if (levels.Count == 0)
                 {
-                    TaskDialog.Show("Кодификатор", "В документе не найдено ни одного уровня.");
+                    TaskDialog.Show("Ошибка", "В модели не найдено ни одного уровня.");
                     return Result.Cancelled;
                 }
 
-                // 3. Открываем окно настроек
+                // 3. Initialize MainWindow
                 var window = new MainWindow(doc, uiApp, settings, levels);
                 bool? dlgResult = window.ShowDialog();
 

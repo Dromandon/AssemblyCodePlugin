@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,6 +17,13 @@ namespace AssemblyCodePlugin.Services
         public int Level { get; set; } = -1;
     }
 
+    public class CrookedCodeInfo
+    {
+        public string Code { get; set; }
+        public string Description { get; set; }
+        public int OriginalLevel { get; set; }
+        public int CorrectedLevel { get; set; }
+    }
     public static class AssemblyCodeTableReader
     {
         public static string GetClassifierFileName(Document doc)
@@ -36,6 +43,9 @@ namespace AssemblyCodePlugin.Services
             catch { }
             return "";
         }
+
+        public static List<CrookedCodeInfo> CrookedCodes { get; set; } = new List<CrookedCodeInfo>();
+        public static bool CrookedCodesExceedLevel5 { get; set; } = false;
 
         public static (IReadOnlyList<AssemblyCodeItem> items,
                         IReadOnlyDictionary<string, AssemblyCodeItem> byCode,
@@ -63,6 +73,7 @@ namespace AssemblyCodePlugin.Services
             }
 
             var items = new List<AssemblyCodeItem>();
+            bool hasDeepClassifier = false;
             var byCode = new Dictionary<string, AssemblyCodeItem>(StringComparer.OrdinalIgnoreCase);
 
             if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
@@ -98,7 +109,28 @@ namespace AssemblyCodePlugin.Services
                     byCode[item.Code] = item;
                 }
 
-                // Преобразуем иерархию по Level (3-й столбец) в явные ParentCode, если это формат Assembly Code
+                hasDeepClassifier = items.Any(x => x.Level > 5);
+                if (ignoreDeep)
+                {
+                    items.RemoveAll(x => x.Level > 5);
+                    byCode = items.ToDictionary(x => x.Code, StringComparer.OrdinalIgnoreCase);
+                }
+
+                CrookedCodes.Clear();
+                CrookedCodesExceedLevel5 = false;
+                foreach (var item in items)
+                {
+                    if (item.Level > 0)
+                    {
+                        int expectedLevel = item.Code.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries).Length;
+                        if (item.Level != expectedLevel && item.Code.Contains("."))
+                        {
+                            CrookedCodes.Add(new CrookedCodeInfo { Code = item.Code, Description = item.Description, OriginalLevel = item.Level, CorrectedLevel = expectedLevel });
+                            if (expectedLevel > 5) CrookedCodesExceedLevel5 = true;
+                            item.Level = expectedLevel;
+                        }
+                    }
+                }
                 bool useLevelHierarchy = items.Count > 0 && items.Where(x => x.Level > 0).Count() > items.Count * 0.5;
                 if (useLevelHierarchy)
                 {
@@ -149,13 +181,6 @@ namespace AssemblyCodePlugin.Services
                 }
             }
 
-            bool hasDeepClassifier = items.Any(x => x.Level > 5);
-            
-            if (ignoreDeep)
-            {
-                items.RemoveAll(x => x.Level > 5);
-                byCode = items.ToDictionary(x => x.Code, StringComparer.OrdinalIgnoreCase);
-            }
 
             return (items, byCode, hasDeepClassifier);
         }

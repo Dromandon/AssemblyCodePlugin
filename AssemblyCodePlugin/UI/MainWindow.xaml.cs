@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -323,11 +323,22 @@ namespace AssemblyCodePlugin.UI
             LoadSettingsToUi(settings);
             RefreshConfigsList();
 
-            // Проверяем классификатор на глубокие уровни (Level > 5)
+            // Проверяем классификатор на глубокие уровни (Level > 5) и на кривые уровни
             try
             {
                 var (_, _, hasDeep) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _settings.IgnoreDeepClassifiers);
                 _hasDeepClassifier = hasDeep;
+                
+                if (AssemblyCodeTableReader.CrookedCodes != null && AssemblyCodeTableReader.CrookedCodes.Count > 0)
+                {
+                    if (WarningCrookedLevelsBorder != null)
+                        WarningCrookedLevelsBorder.Visibility = System.Windows.Visibility.Visible;
+                }
+                else
+                {
+                    if (WarningCrookedLevelsBorder != null)
+                        WarningCrookedLevelsBorder.Visibility = System.Windows.Visibility.Collapsed;
+                }
             }
             catch { }
             UpdateDescParamVisibility();
@@ -583,6 +594,65 @@ namespace AssemblyCodePlugin.UI
             if (ChkDisableZoneSplit != null) ChkDisableZoneSplit.IsChecked = s.DisableZoneSplit;
             if (ChkIgnoreDeepClassifiers != null) ChkIgnoreDeepClassifiers.IsChecked = s.IgnoreDeepClassifiers;
             UpdateZoneSplitVisibility();
+        }
+
+        private void BtnShowCrookedCodes_Click(object sender, RoutedEventArgs e)
+        {
+            var codes = AssemblyCodeTableReader.CrookedCodes;
+            if (codes == null || codes.Count == 0) return;
+
+            var window = new Window
+            {
+                Title = "Коды с неверной вложенностью",
+                Width = 600,
+                Height = 400,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(244, 244, 245))
+            };
+
+            var dock = new System.Windows.Controls.DockPanel { LastChildFill = true };
+
+            if (AssemblyCodeTableReader.CrookedCodesExceedLevel5)
+            {
+                var warningTb = new System.Windows.Controls.TextBlock
+                {
+                    Text = "Данная неточность скорее всего сделана намерено, так как Revit не распознаёт уровни вложенности выше 5-го.",
+                    TextWrapping = TextWrapping.Wrap,
+                    Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(153, 27, 27)),
+                    Margin = new Thickness(14, 0, 14, 14),
+                    FontWeight = FontWeights.SemiBold
+                };
+                System.Windows.Controls.DockPanel.SetDock(warningTb, System.Windows.Controls.Dock.Bottom);
+                dock.Children.Add(warningTb);
+            }
+
+            var dg = new System.Windows.Controls.DataGrid
+            {
+                AutoGenerateColumns = false,
+                IsReadOnly = true,
+                ItemsSource = codes,
+                Margin = new Thickness(14),
+                SelectionMode = System.Windows.Controls.DataGridSelectionMode.Extended,
+                SelectionUnit = System.Windows.Controls.DataGridSelectionUnit.CellOrRowHeader,
+                ClipboardCopyMode = System.Windows.Controls.DataGridClipboardCopyMode.IncludeHeader,
+                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255)),
+                GridLinesVisibility = System.Windows.Controls.DataGridGridLinesVisibility.All
+            };
+
+            dg.Columns.Add(new System.Windows.Controls.DataGridTextColumn { Header = "Код", Binding = new System.Windows.Data.Binding("Code"), Width = new System.Windows.Controls.DataGridLength(1, System.Windows.Controls.DataGridLengthUnitType.Auto) });
+            dg.Columns.Add(new System.Windows.Controls.DataGridTextColumn { Header = "Описание", Binding = new System.Windows.Data.Binding("Description"), Width = new System.Windows.Controls.DataGridLength(1, System.Windows.Controls.DataGridLengthUnitType.Star) });
+            dg.Columns.Add(new System.Windows.Controls.DataGridTextColumn { Header = "Исходный ур.", Binding = new System.Windows.Data.Binding("OriginalLevel") });
+            dg.Columns.Add(new System.Windows.Controls.DataGridTextColumn { Header = "Итоговый ур.", Binding = new System.Windows.Data.Binding("CorrectedLevel") });
+
+            dock.Children.Add(dg);
+            window.Content = dock;
+            window.ShowDialog();
+        }
+        private void BtnCloseCrookedWarning_Click(object sender, RoutedEventArgs e)
+        {
+            if (WarningCrookedLevelsBorder != null)
+                WarningCrookedLevelsBorder.Visibility = System.Windows.Visibility.Collapsed;
         }
 
         private void ChkIgnoreDeepClassifiers_Click(object sender, RoutedEventArgs e)

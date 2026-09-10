@@ -1,4 +1,4 @@
-<Window x:Class="AssemblyCodePlugin.UI.MainWindow"
+﻿<Window x:Class="AssemblyCodePlugin.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Заполнение кодификатора по правилам (Antigravity)" Height="680" Width="1060"
@@ -254,20 +254,44 @@
         </Grid.RowDefinitions>
 
         <!-- Предупреждение о глубоком классификаторе -->
-        <Border x:Name="WarningDeepClassifierBorder" Grid.Row="0" Background="#FFFBEB" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12" Visibility="Collapsed">
-            <StackPanel Orientation="Vertical">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="⚠️ Внимание:" FontWeight="Bold" Foreground="#B45309" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                    <TextBlock Foreground="#92400E" TextWrapping="Wrap" VerticalAlignment="Center">
-                        Файл классификатора имеет более 5 уровней вложенности. Системный параметр Revit «Assembly Code» («Код по классификатору») не поддерживает глубину выше 5.<LineBreak/>
-                        Рекомендуется выбрать другой текстовый параметр, либо согласовать структуру с заказчиком.
+        <StackPanel Grid.Row="0">
+            <Border x:Name="WarningCrookedLevelsBorder" Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12" Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Foreground="#7F1D1D" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,14,0">
+                        <Run Text="Внимание: " FontWeight="Bold" Foreground="#991B1B" />
+                        <Run Text="В загруженном файле классификатора обнаружена ошибка: у некоторых кодов неправильно указана глубина (цифра уровня). Плагин распознал настоящую структуру кодов и автоматически исправил ошибку для своей работы. Пожалуйста, сообщите заказчику или автору классификатора об этой неточности, чтобы они поправили сам текстовый файл."/><LineBreak/>
+                        <Run Text="Неверные уровни вложенности у кодов можно увидеть, нажав на кнопку справа."/>
                     </TextBlock>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="Список кодов" Foreground="#991B1B" Background="#FECACA" BorderThickness="0" Padding="8,4" Cursor="Hand" Margin="0,0,10,0" FontWeight="SemiBold" Click="BtnShowCrookedCodes_Click">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="4"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                        <Button Content="&#x2715;" Width="24" Height="24" Background="Transparent" BorderThickness="0" Foreground="#991B1B" FontWeight="Bold" Cursor="Hand" Click="BtnCloseCrookedWarning_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <Border x:Name="WarningDeepClassifierBorder" Background="#FFFBEB" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12" Visibility="Collapsed">
+                <StackPanel Orientation="Vertical">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="На заметку:" FontWeight="Bold" Foreground="#B45309" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Foreground="#92400E" TextWrapping="Wrap" VerticalAlignment="Center">
+                            В классификаторе есть уровни больше 5 порядка вложенности. Системный параметр Revit «Assembly Code» (Код по классификатору) не поддерживает значения глубже 5.<LineBreak/>
+                            Пожалуйста выберите параметр пользователя, либо игнорируйте уровни иерархии глубже 5.
+                        </TextBlock>
+                    </StackPanel>
+                    <CheckBox x:Name="ChkIgnoreDeepClassifiers" Style="{StaticResource ToggleSwitchStyle}" Content="Не считывать коды глубже 5-го порядка вложенности (требуется перезапуск)" Margin="0,8,0,0" Foreground="#92400E" Click="ChkIgnoreDeepClassifiers_Click"/>
                 </StackPanel>
-                <CheckBox x:Name="ChkIgnoreDeepClassifiers" Style="{StaticResource ToggleSwitchStyle}" Content="Не учитывать коды ниже 5-го уровня вложенности (обрезать структуру)" Margin="0,8,0,0" Foreground="#92400E" Click="ChkIgnoreDeepClassifiers_Click"/>
-            </StackPanel>
-        </Border>
-
-        <!-- Панель управления конфигурациями -->
+            </Border>
+        </StackPanel>
+        <!-- Выбор настроек конфигурации -->
         <Border Grid.Row="1" Background="{StaticResource SurfaceWhite}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,12">
             <DockPanel LastChildFill="False">
                 <!-- Левая часть: Выбор и операции с конфигурациями -->
