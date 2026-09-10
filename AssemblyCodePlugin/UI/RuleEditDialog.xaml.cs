@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -477,6 +477,36 @@ namespace AssemblyCodePlugin.UI
             dlg.ShowDialog();
         }
 
+        private void BtnViewTree_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn)
+            {
+                var (allItems, _, _) = AssemblyCodeTableReader.ReadClassifier(_doc, null, _ignoreDeepClassifiers);
+                if (allItems == null || allItems.Count == 0)
+                {
+                    MessageBox.Show("Не удалось прочитать классификатор.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                bool isAbove = btn.Tag as string == "Above";
+                
+                var sourceList = isAbove ? AbovePreviewMatches : BelowPreviewMatches;
+                List<string> recommended = new List<string>();
+                if (sourceList != null)
+                {
+                    foreach (var match in sourceList)
+                    {
+                        if (match.StartsWith("—")) break;
+                        recommended.Add(match);
+                    }
+                }
+
+                string currentSelection = isAbove ? SelectedAbovePreviewMatch : SelectedBelowPreviewMatch;
+
+                var dlg = new ClassifierTreeDialog(allItems.ToList(), recommended, currentSelection, isReadOnly: true) { Owner = this };
+                dlg.ShowDialog();
+            }
+        }
         private void BtnCheckAboveMatches_Click(object sender, RoutedEventArgs e)
         {
             CheckMatchesPreview(isUnderground: false);

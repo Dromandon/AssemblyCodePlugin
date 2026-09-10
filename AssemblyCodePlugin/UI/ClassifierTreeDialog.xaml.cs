@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -44,9 +44,15 @@ namespace AssemblyCodePlugin.UI
         
         public AssemblyCodeItem SelectedItem { get; private set; }
 
-        public ClassifierTreeDialog(List<AssemblyCodeItem> allItems, List<string> recommendedCodes, string currentSelectionCode = null)
+        public ClassifierTreeDialog(List<AssemblyCodeItem> allItems, List<string> recommendedCodes, string currentSelectionCode = null, bool isReadOnly = false)
         {
             InitializeComponent();
+            if (isReadOnly)
+            {
+                Title = "Просмотр в классификаторе";
+                if (BtnSelectUi != null) BtnSelectUi.Visibility = Visibility.Collapsed;
+                if (BtnCancelUi != null) BtnCancelUi.Content = "Закрыть";
+            }
             
             BuildTree(allItems);
             BuildRecommended(allItems, recommendedCodes);
